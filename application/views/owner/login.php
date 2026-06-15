@@ -49,8 +49,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Robo
 
 <?php if (ENVIRONMENT === 'development'): ?>
 <div class="login-hint">
-<strong>Mode Development:</strong><br>
-Akun owner default di-setup saat install.
+<strong>🔑 Akun Default:</strong><br>
+Username: <strong>admin</strong> · Password: <strong>admin123</strong>
 </div>
 <?php endif; ?>
 

@@ -16,8 +16,15 @@ $current = isset($current_page) ? $current_page : '';
 <a href="<?= base_url('owner/dashboard') ?>" class="sidebar-link <?= $current == 'dashboard' ? 'active' : '' ?>">
 <span class="icon">▦</span> Dashboard
 </a>
-<a href="<?= base_url('owner/toko_tambah') ?>" class="sidebar-link <?= $current == 'toko_tambah' ? 'active' : '' ?>">
-<span class="icon">➕</span> Tambah Toko
+<a href="<?= base_url('owner/toko_list') ?>" class="sidebar-link <?= $current == 'toko_list' ? 'active' : '' ?>">
+<span class="icon">🏪</span> Toko
+</a>
+</div>
+
+<div class="sidebar-section">
+<div class="sidebar-section-title">Akun</div>
+<a href="<?= base_url('owner/akun') ?>" class="sidebar-link <?= $current == 'akun' ? 'active' : '' ?>">
+<span class="icon">👤</span> Akun Saya
 </a>
 </div>
 
@@ -27,3 +34,9 @@ $current = isset($current_page) ? $current_page : '';
 </a>
 </div>
 </aside>
+<script>
+function toggleSidebar() {
+    document.getElementById('adminSidebar').classList.toggle('show');
+    document.getElementById('adminOverlay').classList.toggle('show');
+}
+</script>

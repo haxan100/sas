@@ -2,11 +2,12 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title><?= $title ?></title>
 <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/admin-toko.css') ?>">
 <style>
-.admin-sidebar, .admin-header { --tema: #6366f1; }
+:root { --tema-color: #6366f1; }
 .detail-section { margin-bottom: 20px; }
 .detail-section h4 { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; font-weight: 700; }
 .detail-row { display: flex; padding: 5px 0; font-size: 14px; gap: 8px; }
@@ -25,10 +26,10 @@
 <div class="admin-main">
 <?php $this->load->view('owner/_header', ['page_title' => 'Detail Order', 'breadcrumb' => 'Semua toko']); ?>
 <main class="admin-content">
-<div class="page-header">
+<div class="page-header" style="background:#fff;padding:20px;border-radius:14px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.04);">
 <div>
-<h1 class="page-title">📋 Order <?= $order->kode_order ?></h1>
-<div class="page-subtitle">Detail pesanan</div>
+<h1 class="page-title" style="font-size:22px;color:#2c3e50;margin-bottom:4px;">📋 Order <?= $order->kode_order ?></h1>
+<div class="page-subtitle" style="color:#7f8c8d;font-size:14px;">Detail pesanan</div>
 </div>
 <a href="<?= base_url('owner/dashboard') ?>" class="btn btn-secondary">← Kembali</a>
 </div>
@@ -49,12 +50,17 @@
 <div class="detail-row"><div class="label">Status Bayar</div><div class="value"><?= $order->status_bayar ?></div></div>
 </div>
 <div class="detail-section">
+<h4>🏪 Toko</h4>
+<div class="detail-row"><div class="label">Nama</div><div class="value"><?= htmlspecialchars($toko->nama_toko ?? '-') ?></div></div>
+<div class="detail-row"><div class="label">Pemilik</div><div class="value"><?= htmlspecialchars($toko->pemilik ?? '-') ?></div></div>
+</div>
+<div class="detail-section">
 <h4>📅 Info</h4>
 <div class="detail-row"><div class="label">Tanggal</div><div class="value"><?= date('d/m/Y H:i', strtotime($order->created_at)) ?></div></div>
 </div>
 <?php if ($order->catatan): ?>
 <div class="detail-section">
-<h4>📝 Catatan Umum</h4>
+<h4>📝 Catatan</h4>
 <div style="background:#fef3c7;padding:10px 14px;border-radius:8px;color:#92400e;font-size:13px;"><?= htmlspecialchars($order->catatan) ?></div>
 </div>
 <?php endif; ?>
@@ -85,7 +91,7 @@
 </div>
 </div>
 </main>
-<?php $this->load->view('toko/_footer'); ?>
+<?php $this->load->view('toko/_bottom_nav', ['current_page' => 'dashboard']); ?>
 </div>
 </div>
 </body>

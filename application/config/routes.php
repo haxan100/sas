@@ -66,11 +66,13 @@ $route['owner/login'] = 'owner/login';
 $route['owner/do_login'] = 'owner/do_login';
 $route['owner/logout'] = 'owner/logout';
 $route['owner/dashboard'] = 'owner/dashboard';
-$route['owner/toko_tambah'] = 'owner/toko_tambah';
-$route['owner/toko_simpan'] = 'owner/toko_simpan';
-$route['owner/toko_edit/(:num)'] = 'owner/toko_edit/$1';
-$route['owner/toko_update/(:num)'] = 'owner/toko_update/$1';
+$route['owner/akun'] = 'owner/akun';
+$route['owner/update_akun'] = 'owner/update_akun';
+$route['owner/toko_list'] = 'owner/toko_list';
+$route['owner/toko_save'] = 'owner/toko_save';
+$route['owner/toko_get/(:num)'] = 'owner/toko_get/$1';
 $route['owner/toko_hapus/(:num)'] = 'owner/toko_hapus/$1';
+$route['owner/toko_ajax'] = 'owner/toko_ajax';
 $route['owner/order_detail/(:num)'] = 'owner/order_detail/$1';
 
 // Admin Toko - diakses di /admin (session-based, bukan slug)

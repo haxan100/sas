@@ -1,0 +1,466 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Admin extends CI_Controller {
+
+    public function __construct() {
+        parent::__construct();
+        $this->load->model(['Toko_model', 'Produk_model', 'Order_model', 'Kategori_model']);
+        $this->load->library(['session', 'upload']);
+        $this->load->helper(['url', 'form']);
+        // Prevent caching of auth-protected pages
+        $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        $this->output->set_header('Pragma: no-cache');
+        $this->output->set_header('Expires: 0');
+    }
+
+    // ============= AUTH =============
+    public function index() {
+        if ($this->session->userdata('toko_id')) {
+            redirect('admin/dashboard');
+        }
+        $this->load->view('admin/login');
+    }
+
+    public function do_login() {
+        $u = $this->input->post('username');
+        $p = $this->input->post('password');
+        // Cari toko dengan username/password matching
+        $toko = $this->Toko_model->get_by_username($u);
+        if ($toko && password_verify($p, $toko->password)) {
+            if ($toko->status != 'aktif') {
+                $this->session->set_flashdata('error', 'Toko ini nonaktif. Hubungi owner.');
+                redirect('admin');
+            }
+            // Destroy old session, start fresh to prevent fixation
+            $this->session->sess_regenerate(TRUE);
+            $this->session->set_userdata([
+                'toko_id' => $toko->id,
+                'toko_slug' => $toko->slug,
+                'toko_nama' => $toko->nama_toko,
+                'toko_tema' => $toko->tema_warna,
+                'is_admin' => true,
+            ]);
+            redirect('admin/dashboard');
+        }
+        $this->session->set_flashdata('error', 'Username/password salah');
+        redirect('admin');
+    }
+
+    public function logout() {
+        $this->session->unset_userdata(['toko_id', 'toko_slug', 'toko_nama', 'toko_tema', 'is_admin']);
+        redirect('admin');
+    }
+
+    // ============= GUARD =============
+    private function _cek() {
+        if (!$this->session->userdata('toko_id') || !$this->session->userdata('is_admin')) {
+            $this->session->set_flashdata('error', 'Silakan login terlebih dahulu');
+            redirect('admin');
+            exit;
+        }
+        $toko = $this->Toko_model->get_by_id($this->session->userdata('toko_id'));
+        if (!$toko || $toko->status != 'aktif') {
+            $this->session->unset_userdata(['toko_id', 'toko_slug', 'toko_nama', 'toko_tema', 'is_admin']);
+            $this->session->set_flashdata('error', 'Toko nonaktif, hubungi owner');
+            redirect('admin');
+            exit;
+        }
+        return $toko;
+    }
+
+    // Helper: session toko untuk view
+    private function _view_data($page, $title) {
+        $toko = $this->_cek();
+        return ['toko' => $toko, 'page' => $page, 'title' => $title];
+    }
+
+    // ============= PAGES =============
+    public function dashboard() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Dashboard - '.$toko->nama_toko;
+        $data['produk'] = $this->Produk_model->get_by_toko($toko->id);
+        $data['orders'] = $this->Order_model->get_by_toko_array($toko->id);
+        $data['total_order'] = $this->Order_model->count_by_toko($toko->id);
+        $data['total_pendapatan'] = $this->Order_model->total_pendapatan_toko($toko->id);
+        $this->load->view('admin/dashboard', $data);
+    }
+
+    public function produk() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['kategori'] = $this->Kategori_model->get_by_toko($toko->id);
+        $data['title'] = 'Produk - '.$toko->nama_toko;
+        $this->load->view('admin/produk_list', $data);
+    }
+
+    public function orders() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Orderan - '.$toko->nama_toko;
+        $this->load->view('admin/orders_list', $data);
+    }
+
+    public function kategori() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Kategori - '.$toko->nama_toko;
+        $this->load->view('admin/kategori_list', $data);
+    }
+
+    public function pengaturan() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Pengaturan - '.$toko->nama_toko;
+        $this->load->view('admin/pengaturan', $data);
+    }
+
+    public function akun() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Akun - '.$toko->nama_toko;
+        $this->load->view('admin/akun', $data);
+    }
+
+    public function update_akun() {
+        $toko = $this->_cek();
+        $username_baru = trim($this->input->post('username'));
+        $password_lama = $this->input->post('password_lama');
+        $password_baru = $this->input->post('password_baru');
+        $password_konfirm = $this->input->post('password_konfirm');
+
+        if (empty($username_baru)) {
+            echo json_encode(['status' => 'error', 'message' => 'Username tidak boleh kosong']);
+            return;
+        }
+
+        // Cek duplikat username
+        $existing = $this->Toko_model->get_by_username($username_baru);
+        if ($existing && $existing->id != $toko->id) {
+            echo json_encode(['status' => 'error', 'message' => 'Username sudah dipakai toko lain']);
+            return;
+        }
+
+        $data_update = ['username' => $username_baru];
+
+        // Update password kalau diisi
+        if (!empty($password_baru)) {
+            if (empty($password_lama) || !password_verify($password_lama, $toko->password)) {
+                echo json_encode(['status' => 'error', 'message' => 'Password lama salah']);
+                return;
+            }
+            if (strlen($password_baru) < 4) {
+                echo json_encode(['status' => 'error', 'message' => 'Password baru minimal 4 karakter']);
+                return;
+            }
+            if ($password_baru !== $password_konfirm) {
+                echo json_encode(['status' => 'error', 'message' => 'Konfirmasi password tidak cocok']);
+                return;
+            }
+            $data_update['password'] = $password_baru;
+        }
+
+        $this->Toko_model->update($toko->id, $data_update);
+
+        // Update session username (slug tidak berubah karena username beda dari slug)
+        $this->session->set_userdata('toko_nama', $toko->nama_toko);
+
+        $msg = 'Akun diupdate';
+        if (!empty($password_baru)) $msg .= ' & password diganti';
+        echo json_encode(['status' => 'ok', 'message' => $msg]);
+    }
+
+    public function update_pengaturan() {
+        $toko = $this->_cek();
+        $config['upload_path'] = './assets/uploads/';
+        $config['allowed_types'] = 'gif|jpg|jpeg|png';
+        $config['max_size'] = 2048;
+        $this->load->library('upload', $config);
+
+        $data = [
+            'nama_toko' => $this->input->post('nama_toko'),
+            'pemilik' => $this->input->post('pemilik'),
+            'no_wa' => $this->input->post('no_wa'),
+            'no_rek' => $this->input->post('no_rek'),
+            'nama_bank' => $this->input->post('nama_bank'),
+            'atas_nama' => $this->input->post('atas_nama'),
+            'alamat' => $this->input->post('alamat'),
+            'kategori' => $this->input->post('kategori'),
+            'tema_warna' => $this->input->post('tema_warna'),
+        ];
+        if ($this->input->post('password_baru')) {
+            $data['password'] = $this->input->post('password_baru');
+        }
+        if ($this->upload->do_upload('logo')) {
+            $data['logo'] = $this->upload->data('file_name');
+        }
+        $this->Toko_model->update($toko->id, $data);
+        $this->session->set_userdata('toko_nama', $this->input->post('nama_toko'));
+        $this->session->set_userdata('toko_tema', $this->input->post('tema_warna'));
+        $this->session->set_flashdata('sukses', 'Pengaturan disimpan');
+        redirect('admin/pengaturan');
+    }
+
+    // ============= AJAX - PRODUK =============
+    public function produk_ajax() {
+        $toko = $this->_cek();
+        $draw = intval($this->input->get('draw'));
+        $search = $this->input->get('search')['value'] ?? '';
+        $length = $this->input->get('length') ?: 10;
+        $start = $this->input->get('start') ?: 0;
+
+        $this->db->from('produk');
+        $this->db->where('toko_id', $toko->id);
+        $totalRecords = $this->db->count_all_results('', false);
+
+        if (!empty($search)) {
+            $s = $this->db->escape_like_str($search);
+            $this->db->group_start();
+            $this->db->like('nama_produk', $s);
+            $this->db->or_like('kategori', $s);
+            $this->db->or_like('deskripsi', $s);
+            $this->db->group_end();
+        }
+        $totalFiltered = $this->db->count_all_results('', false);
+
+        $order_col_idx = $this->input->get('order')[0]['column'] ?? 0;
+        $order_dir = $this->input->get('order')[0]['dir'] ?? 'desc';
+        $cols = ['id', 'foto', 'nama_produk', 'kategori', 'harga', 'stok', 'status', null];
+        $order_col = $cols[$order_col_idx] ?? 'id';
+        if ($order_col) $this->db->order_by($order_col, $order_dir);
+        $this->db->limit($length, $start);
+        $rows = $this->db->get()->result();
+
+        $data = [];
+        foreach ($rows as $p) {
+            $fotoCell = $p->foto
+                ? '<img src="'.base_url('assets/uploads/'.$p->foto).'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">'
+                : '<div style="width:50px;height:50px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;">🍽️</div>';
+            $hargaCell = (!empty($p->harga_diskon) && $p->harga_diskon > 0 && $p->harga_diskon < $p->harga)
+                ? '<strong style="color:#dc2626;">Rp '.number_format($p->harga_diskon, 0, ',', '.').'</strong><br><small style="text-decoration:line-through;color:#9ca3af;">Rp '.number_format($p->harga, 0, ',', '.').'</small>'
+                : '<strong>Rp '.number_format($p->harga, 0, ',', '.').'</strong>';
+            $statusCell = '<span class="dt-badge" style="background:'.($p->status == 'tersedia' ? '#dcfce7' : '#fee2e2').';color:'.($p->status == 'tersedia' ? '#166534' : '#991b1b').';">'.$p->status.'</span>';
+            $aksiCell = '<div class="table-actions-stack" style="display:flex;gap:6px;">
+                <button class="btn btn-secondary btn-sm btn-icon" onclick="editProduk('.$p->id.')" title="Edit">✏️</button>
+                <button class="btn btn-secondary btn-sm btn-icon" onclick="hapusProduk('.$p->id.')" title="Hapus">🗑️</button>
+            </div>';
+            $data[] = [
+                $p->id,
+                $fotoCell,
+                '<strong>'.htmlspecialchars($p->nama_produk).'</strong>'.($p->deskripsi ? '<br><small style="color:#9ca3af;">'.htmlspecialchars(substr($p->deskripsi, 0, 40)).'</small>' : ''),
+                '<span class="dt-badge" style="background:#dbeafe;color:#1e40af;">'.htmlspecialchars($p->kategori ?: 'Lainnya').'</span>',
+                $hargaCell,
+                $p->stok,
+                $statusCell,
+                $aksiCell
+            ];
+        }
+        echo json_encode([
+            'draw' => $draw,
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $totalFiltered,
+            'data' => $data
+        ]);
+    }
+
+    public function produk_save() {
+        $toko = $this->_cek();
+        $id = $this->input->post('id');
+        $config['upload_path'] = './assets/uploads/';
+        $config['allowed_types'] = 'gif|jpg|jpeg|png';
+        $config['max_size'] = 2048;
+        $this->load->library('upload', $config);
+
+        $foto = null;
+        if ($this->upload->do_upload('foto')) {
+            $foto = $this->upload->data('file_name');
+        }
+
+        $data = [
+            'nama_produk' => $this->input->post('nama_produk'),
+            'kategori' => $this->input->post('kategori') ?: 'Lainnya',
+            'harga' => $this->input->post('harga'),
+            'harga_diskon' => $this->input->post('harga_diskon') ?: 0,
+            'deskripsi' => $this->input->post('deskripsi'),
+            'stok' => $this->input->post('stok'),
+            'status' => $this->input->post('status') ?: 'tersedia',
+        ];
+        if ($foto) $data['foto'] = $foto;
+
+        if ($id) {
+            $this->Produk_model->update($id, $data);
+            echo json_encode(['status' => 'ok', 'message' => 'Produk diupdate']);
+        } else {
+            $data['toko_id'] = $toko->id;
+            $this->Produk_model->insert($data);
+            echo json_encode(['status' => 'ok', 'message' => 'Produk ditambah']);
+        }
+    }
+
+    public function produk_get($id) {
+        $toko = $this->_cek();
+        $p = $this->Produk_model->get_by_id($id);
+        if (!$p || $p->toko_id != $toko->id) {
+            echo json_encode(['error' => 'not found']);
+            return;
+        }
+        echo json_encode($p);
+    }
+
+    public function produk_hapus($id) {
+        $toko = $this->_cek();
+        $p = $this->Produk_model->get_by_id($id);
+        if (!$p || $p->toko_id != $toko->id) {
+            echo json_encode(['status' => 'error', 'message' => 'Produk tidak ditemukan']);
+            return;
+        }
+        $this->Produk_model->delete($id);
+        echo json_encode(['status' => 'ok', 'message' => 'Produk dihapus']);
+    }
+
+    // ============= AJAX - ORDERS =============
+    public function orders_ajax() {
+        $toko = $this->_cek();
+        $draw = intval($this->input->get('draw'));
+        $totalRecords = $this->Order_model->dt_count_all($toko->id);
+        $totalFiltered = $this->Order_model->dt_count_filtered($toko->id);
+        $data = [];
+        $orders = $this->Order_model->dt_list($toko->id);
+        foreach ($orders as $o) {
+            $row = [];
+            $row[] = '#'.$o->id;
+            $row[] = '<strong>'.htmlspecialchars($o->kode_order).'</strong>';
+            $row[] = htmlspecialchars($o->nama_pembeli).'<br><small style="color:#9ca3af;">Blok '.htmlspecialchars($o->blok_rumah).'</small>';
+            $row[] = '<strong>Rp '.number_format($o->total_harga, 0, ',', '.').'</strong>';
+            $row[] = '<span class="dt-badge" style="background:'.($o->metode_bayar == 'cash' ? '#dcfce7' : '#dbeafe').';color:'.($o->metode_bayar == 'cash' ? '#166534' : '#1e40af').';">'.strtoupper($o->metode_bayar).'</span>';
+            $row[] = '<span class="dt-badge" style="background:'.($o->status_bayar == 'lunas' ? '#dcfce7' : '#fee2e2').';color:'.($o->status_bayar == 'lunas' ? '#166534' : '#991b1b').';">'.$o->status_bayar.'</span>';
+            $row[] = '<span class="dt-badge" style="background:'.($o->status_order == 'selesai' ? '#dcfce7' : ($o->status_order == 'diproses' ? '#fef3c7' : ($o->status_order == 'batal' ? '#fee2e2' : '#dbeafe'))).';color:'.($o->status_order == 'selesai' ? '#166534' : ($o->status_order == 'diproses' ? '#92400e' : ($o->status_order == 'batal' ? '#991b1b' : '#1e40af'))).';">'.$o->status_order.'</span>';
+            $row[] = date('d/m/Y H:i', strtotime($o->created_at));
+            $row[] = '<button class="btn btn-secondary btn-sm btn-icon" onclick="viewOrder('.$o->id.')" title="Detail">👁️</button>';
+            $data[] = $row;
+        }
+        echo json_encode([
+            'draw' => $draw,
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $totalFiltered,
+            'data' => $data
+        ]);
+    }
+
+    public function order_get($id) {
+        $toko = $this->_cek();
+        $order = $this->Order_model->get_by_id($id);
+        if (!$order || $order->toko_id != $toko->id) {
+            echo json_encode(['error' => 'not found']);
+            return;
+        }
+        $items = $this->Order_model->get_items($id);
+        echo json_encode(['order' => $order, 'items' => $items]);
+    }
+
+    public function order_update($id) {
+        $toko = $this->_cek();
+        $order = $this->Order_model->get_by_id($id);
+        if (!$order || $order->toko_id != $toko->id) {
+            echo json_encode(['status' => 'error', 'message' => 'Order tidak ditemukan']);
+            return;
+        }
+        $data = [
+            'status_order' => $this->input->post('status_order'),
+            'status_bayar' => $this->input->post('status_bayar'),
+        ];
+        $this->Order_model->update_status($id, $data);
+        echo json_encode(['status' => 'ok', 'message' => 'Order diupdate']);
+    }
+
+    // ============= AJAX - KATEGORI =============
+    public function kategori_ajax() {
+        $toko = $this->_cek();
+        $draw = intval($this->input->get('draw'));
+        $search = $this->input->get('search')['value'] ?? '';
+        $length = $this->input->get('length') ?: 10;
+        $start = $this->input->get('start') ?: 0;
+        $order_col_idx = $this->input->get('order')[0]['column'] ?? 0;
+        $order_dir = $this->input->get('order')[0]['dir'] ?? 'asc';
+        $cols = ['id', 'nama', 'icon', 'jumlah_produk', null];
+        $order_col = $cols[$order_col_idx] ?? 'urutan';
+        if ($order_col == 'jumlah_produk') $order_col = 'id';
+
+        $totalRecords = $this->Kategori_model->dt_count_all($toko->id);
+        $totalFiltered = $this->Kategori_model->dt_count_filtered($toko->id, $search);
+        $rows = $this->Kategori_model->dt_list($toko->id, $search, $start, $length, $order_col, $order_dir);
+
+        $data = [];
+        foreach ($rows as $k) {
+            $data[] = [
+                $k->id,
+                '<strong>'.htmlspecialchars($k->nama).'</strong>',
+                $k->icon ? '<span style="font-size:20px;">'.htmlspecialchars($k->icon).'</span>' : '<span style="color:#9ca3af;">-</span>',
+                '<span class="dt-badge" style="background:#dbeafe;color:#1e40af;">'.$k->jumlah_produk.' produk</span>',
+                $k->urutan,
+                '<div style="display:flex;gap:6px;">
+                    <button class="btn btn-secondary btn-sm btn-icon" onclick="editKategori('.$k->id.')" title="Edit">✏️</button>
+                    <button class="btn btn-secondary btn-sm btn-icon" onclick="hapusKategori('.$k->id.')" title="Hapus">🗑️</button>
+                </div>'
+            ];
+        }
+        echo json_encode([
+            'draw' => $draw,
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $totalFiltered,
+            'data' => $data
+        ]);
+    }
+
+    public function kategori_save() {
+        $toko = $this->_cek();
+        $id = $this->input->post('id');
+        $nama = trim($this->input->post('nama'));
+        if (empty($nama)) {
+            echo json_encode(['status' => 'error', 'message' => 'Nama kategori wajib diisi']);
+            return;
+        }
+        $existing = $this->db->get_where('kategori', ['toko_id' => $toko->id, 'nama' => $nama])->row();
+        if ($existing && (!$id || $existing->id != $id)) {
+            echo json_encode(['status' => 'error', 'message' => 'Kategori "'.$nama.'" sudah ada']);
+            return;
+        }
+        $data = [
+            'nama' => $nama,
+            'icon' => $this->input->post('icon') ?: null,
+            'urutan' => (int)$this->input->post('urutan') ?: 0,
+        ];
+        if ($id) {
+            $this->Kategori_model->update($id, $data);
+            echo json_encode(['status' => 'ok', 'message' => 'Kategori diupdate']);
+        } else {
+            $data['toko_id'] = $toko->id;
+            $this->Kategori_model->insert($data);
+            echo json_encode(['status' => 'ok', 'message' => 'Kategori ditambah']);
+        }
+    }
+
+    public function kategori_get($id) {
+        $toko = $this->_cek();
+        $k = $this->Kategori_model->get_by_id($id);
+        if (!$k || $k->toko_id != $toko->id) {
+            echo json_encode(['error' => 'not found']);
+            return;
+        }
+        echo json_encode($k);
+    }
+
+    public function kategori_hapus($id) {
+        $toko = $this->_cek();
+        $k = $this->Kategori_model->get_by_id($id);
+        if (!$k || $k->toko_id != $toko->id) {
+            echo json_encode(['status' => 'error', 'message' => 'Kategori tidak ditemukan']);
+            return;
+        }
+        $this->db->where(['toko_id' => $toko->id, 'kategori' => $k->nama]);
+        $this->db->update('produk', ['kategori' => 'Lainnya']);
+        $this->Kategori_model->delete($id);
+        echo json_encode(['status' => 'ok', 'message' => 'Kategori dihapus, produk dipindah ke "Lainnya"']);
+    }
+}

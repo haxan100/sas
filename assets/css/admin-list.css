@@ -1,0 +1,45 @@
+/* Admin Toko - List page styles */
+
+/* Toolbar */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar-left { display: flex; gap: 8px; align-items: center; flex: 1; flex-wrap: wrap; }
+.toolbar input.search { max-width: 280px; }
+
+/* Filter pills */
+.filter-pill { padding: 5px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; font-size: 13px; color: #4b5563; cursor: pointer; white-space: nowrap; transition: all .15s; }
+.filter-pill:hover { background: #e5e7eb; }
+.filter-pill.active { background: var(--tema-color, #111); color: #fff; border-color: var(--tema-color, #111); }
+.filter-pill .count { background: rgba(0,0,0,.08); padding: 1px 6px; border-radius: 10px; margin-left: 4px; font-size: 11px; }
+.filter-pill.active .count { background: rgba(255,255,255,.25); }
+
+/* DataTable */
+table.dataTable thead th { background: linear-gradient(135deg, #1f2937, #111); color: #fff !important; border: none !important; }
+table.dataTable thead th.sorting:after, table.dataTable thead th.sorting_asc:after, table.dataTable thead th.sorting_desc:after { color: #fbbf24; }
+table.dataTable tbody td { vertical-align: middle; }
+table.dataTable tbody tr:hover { background: #fafbfc; }
+
+/* Product image */
+.produk-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; }
+.produk-img-empty { width: 50px; height: 50px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+/* Action buttons in tables */
+.action-btns { display: flex; gap: 4px; }
+.action-btns .btn { padding: 5px 9px; font-size: 13px; }
+
+/* Modal form grid */
+.modal-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.modal-form-grid .full { grid-column: span 2; }
+.kategori-select-wrap { display: flex; gap: 6px; }
+.kategori-select-wrap select { flex: 1; }
+.btn-tambah-kecil { padding: 10px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.btn-tambah-kecil:hover { background: #e5e7eb; }
+
+@media(max-width: 700px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-left { width: 100%; flex-direction: column; align-items: stretch; }
+  .toolbar input.search { max-width: 100%; }
+  .filter-pills-wrap { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .toolbar .btn { width: 100%; }
+  .modal-form-grid { grid-template-columns: 1fr; }
+  .modal-form-grid .full { grid-column: span 1; }
+}

@@ -235,8 +235,17 @@ function openTokoModal() {
     document.getElementById('tWarna').value = '#ff6b35';
     document.getElementById('tLogoHint').textContent = '*Upload logo (opsional)';
     document.getElementById('statusField').style.display = 'none';
-    document.getElementById('tokoModal').classList.add('show');
-    setTimeout(() => document.getElementById('tNama').focus(), 100);
+    const modal = document.getElementById('tokoModal');
+    modal.classList.add('show');
+    // Force layout recalc
+    setTimeout(() => {
+        modal.querySelector('.admin-modal-content').style.display = 'flex';
+        const body = modal.querySelector('.admin-modal-body');
+        // Ensure body is scrollable
+        body.style.maxHeight = 'calc(100vh - 160px)';
+        body.style.overflowY = 'auto';
+        document.getElementById('tNama').focus();
+    }, 50);
 }
 
 function closeTokoModal() {
@@ -268,9 +277,16 @@ function editToko(id) {
             document.getElementById('tStatus').value = t.status || 'aktif';
             document.getElementById('tLogoHint').textContent = '*Kosongkan jika tidak ingin ganti. File: ' + (t.logo || 'tidak ada');
             document.getElementById('statusField').style.display = 'block';
-            document.getElementById('tokoModal').classList.add('show');
+            const modal = document.getElementById('tokoModal');
+            modal.classList.add('show');
+            setTimeout(() => {
+                modal.querySelector('.admin-modal-content').style.display = 'flex';
+                const body = modal.querySelector('.admin-modal-body');
+                body.style.maxHeight = 'calc(100vh - 160px)';
+                body.style.overflowY = 'auto';
+            }, 50);
         });
-}
+    }
 
 function hapusToko(id) {
     if (!confirm('Hapus toko ini? Semua produk & orderan akan ikut terhapus.')) return;

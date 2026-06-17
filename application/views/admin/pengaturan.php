@@ -95,6 +95,18 @@
 <input type="file" name="logo" class="form-control" accept="image/*">
 </div>
 </div>
+<div class="form-group">
+<label class="form-label">Cover Toko (Banner)</label>
+<div class="cover-area" style="margin-top:8px;">
+<?php if (!empty($toko->cover_photo)): ?>
+<div class="cover-preview" style="width:100%;max-width:400px;height:150px;border-radius:12px;overflow:hidden;margin-bottom:12px;background:#f0f0f0;">
+<img src="<?= base_url('assets/uploads/'.$toko->cover_photo) ?>" style="width:100%;height:100%;object-fit:cover;">
+</div>
+<?php endif; ?>
+<input type="file" name="cover_photo" class="form-control" accept="image/*">
+<small style="color:#666;display:block;margin-top:6px;">Ukuran ideal: 1200x400 pixel (landscape)</small>
+</div>
+</div>
 </div>
 </div>
 

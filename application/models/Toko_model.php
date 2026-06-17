@@ -19,6 +19,10 @@ class Toko_model extends CI_Model {
         return $this->db->get_where('toko', ['username' => $username])->row();
     }
 
+    public function get_by_id_toko($id) {
+        return $this->db->get_where('toko', ['id' => $id])->row();
+    }
+
     public function insert($data) {
         $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
         $data['created_at'] = date('Y-m-d H:i:s');
@@ -41,5 +45,21 @@ class Toko_model extends CI_Model {
 
     public function count_all() {
         return $this->db->count_all('toko');
+    }
+
+    public function count_by_status($status) {
+        return $this->db->get_where('toko', ['status' => $status])->num_rows();
+    }
+
+    public function get_by_status($status) {
+        return $this->db->order_by('created_at', 'DESC')->get_where('toko', ['status' => $status])->result();
+    }
+
+    public function mark_onboarding_done($id) {
+        return $this->db->where('id', $id)->update('toko', ['onboarding_done' => 1]);
+    }
+
+    public function reset_onboarding($id) {
+        return $this->db->where('id', $id)->update('toko', ['onboarding_done' => 0]);
     }
 }

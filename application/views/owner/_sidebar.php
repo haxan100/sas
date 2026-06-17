@@ -16,6 +16,12 @@ $current = isset($current_page) ? $current_page : '';
 <a href="<?= base_url('owner/dashboard') ?>" class="sidebar-link <?= $current == 'dashboard' ? 'active' : '' ?>">
 <span class="icon">▦</span> Dashboard
 </a>
+<a href="<?= base_url('owner/verifikasi') ?>" class="sidebar-link <?= $current == 'verifikasi' ? 'active' : '' ?>">
+<span class="icon">✅</span> Verifikasi
+<?php $pending_count = $this->db->get_where('toko', ['status' => 'pending'])->num_rows(); if ($pending_count > 0): ?>
+<span style="background:#ef4444;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:auto;"><?= $pending_count ?></span>
+<?php endif; ?>
+</a>
 <a href="<?= base_url('owner/toko_list') ?>" class="sidebar-link <?= $current == 'toko_list' ? 'active' : '' ?>">
 <span class="icon">🏪</span> Toko
 </a>

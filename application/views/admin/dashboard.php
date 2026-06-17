@@ -56,6 +56,7 @@
 <h3 class="card-title">⚡ Aksi Cepat</h3>
 <div class="card-desc">Pintasan menu</div>
 </div>
+<a href="<?= base_url('admin/welcome') ?>" class="btn btn-secondary btn-sm" style="background:#fef3c7;color:#92400e;">🎯 Lihat Tour Lagi</a>
 </div>
 <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;">
 <a href="<?= base_url('admin/produk') ?>" class="quick-link">

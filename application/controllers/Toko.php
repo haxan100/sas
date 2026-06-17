@@ -21,6 +21,7 @@ class Toko extends CI_Controller {
         $this->load->model(['Toko_model', 'Produk_model', 'Order_model', 'Kategori_model']);
         $this->load->library(['session', 'upload']);
         $this->load->helper(['url', 'form']);
+        $this->load->helper('Log_helper');
     }
 
     // ============= HALAMAN USER (PELANGGAN) =============
@@ -113,6 +114,9 @@ class Toko extends CI_Controller {
         ];
 
         $order_id = $this->Order_model->insert_order($order_data, $items);
+        
+        // Log customer order
+        Log_Helper::log_order_created($toko->id, $toko->nama_toko, $nama, $kode, $total);
 
         // Build WA message
         $msg = "Halo ".($toko->pemilik).", saya mau pesan:\n\n";

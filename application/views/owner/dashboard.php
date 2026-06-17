@@ -6,7 +6,7 @@
 <title><?= $title ?></title>
 <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
 <link rel="stylesheet" href="<?= base_url('assets/css/admin-toko.css') ?>">
-<style>:root { --tema-color: #6366f1; }</style>
+<style>:root { --tema-color: #6366f1; } @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }</style>
 </head>
 <body class="admin-body">
 <div class="admin-overlay" id="adminOverlay" onclick="toggleSidebar()"></div>
@@ -15,6 +15,19 @@
 <div class="admin-main">
 <?php $this->load->view('owner/_header', ['page_title' => 'Dashboard Owner', 'breadcrumb' => 'Ringkasan seluruh toko']); ?>
 <main class="admin-content">
+<?php if (!empty($pending_count) && $pending_count > 0): ?>
+<a href="<?= base_url('owner/verifikasi') ?>" style="display:block;text-decoration:none;color:inherit;">
+<div style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#fff;padding:18px 22px;border-radius:12px;margin-bottom:20px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 16px rgba(245,158,11,.3);transition:transform .2s;">
+<div style="font-size:32px;animation:pulse 2s infinite;">⏳</div>
+<div style="flex:1;">
+<strong style="font-size:15px;display:block;margin-bottom:2px;"><?= $pending_count ?> Toko Menunggu Verifikasi!</strong>
+<small style="opacity:.9;font-size:13px;">Klik untuk meninjau pendaftaran toko baru →</small>
+</div>
+<span style="font-size:20px;">→</span>
+</div>
+</a>
+<?php endif; ?>
+
 <div style="background:linear-gradient(135deg, #6366f1, #4f46e5);color:#fff;padding:28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 16px rgba(99,102,241,.3);position:relative;overflow:hidden;">
 <div style="position:relative;z-index:1;">
 <h2 style="font-size:22px;margin-bottom:6px;">👑 Selamat datang, Owner!</h2>
@@ -61,11 +74,27 @@
 </div>
 </div>
 <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;">
+<a href="<?= base_url('owner/verifikasi') ?>" class="quick-link" <?= !empty($pending_count) && $pending_count > 0 ? 'style="background:#fffbeb;border-color:#f59e0b;"' : '' ?>>
+<div class="quick-link-icon" style="background:linear-gradient(135deg, #f59e0b, #d97706);">✅</div>
+<div class="quick-link-text">
+<h4>Verifikasi</h4>
+<small>Aktifkan toko baru <?= !empty($pending_count) && $pending_count > 0 ? '('.$pending_count.' pending)' : '' ?></small>
+</div>
+<span class="quick-link-arrow">→</span>
+</a>
 <a href="<?= base_url('owner/toko_list') ?>" class="quick-link">
 <div class="quick-link-icon" style="background:linear-gradient(135deg, #6366f1, #4f46e5);">🏪</div>
 <div class="quick-link-text">
 <h4>Kelola Toko</h4>
 <small>Tambah, edit, hapus toko</small>
+</div>
+<span class="quick-link-arrow">→</span>
+</a>
+<a href="<?= base_url('logs') ?>" class="quick-link">
+<div class="quick-link-icon" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed);">📋</div>
+<div class="quick-link-text">
+<h4>Activity Logs</h4>
+<small>Monitor semua aktivitas</small>
 </div>
 <span class="quick-link-arrow">→</span>
 </a>
@@ -92,7 +121,7 @@
 <div class="card-header">
 <div>
 <h3 class="card-title">🏪 Daftar Toko Aktif</h3>
-<div class="card-desc"><?= $total_toko ?> toko terdaftar</div>
+<div class="card-desc"><?= $total_toko ?> toko terdaftar · <?= $aktif_count ?> aktif · <?= $pending_count ?> pending</div>
 </div>
 <a href="<?= base_url('owner/toko_list') ?>" class="btn btn-secondary btn-sm">Kelola semua →</a>
 </div>

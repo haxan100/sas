@@ -483,7 +483,9 @@ $config['csrf_exclude_uris'] = array(
     'owner/update_akun',
     'admin/produk_hapus/\d+',
     'admin/kategori_hapus/\d+',
-    'admin/order_update/\d+'
+    'admin/order_update/\d+',
+    'admin/skip_tour',
+    'admin/reset_tour'
 );
 
 /*

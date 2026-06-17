@@ -16,6 +16,21 @@ function toast(msg, type) {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// Ensure modal footer is always visible by enforcing proper sizing
+document.addEventListener('DOMContentLoaded', function() {
+    function fixModalSize() {
+        document.querySelectorAll('.admin-modal.show .admin-modal-content').forEach(modal => {
+            // Force browser to recalculate layout
+            modal.style.display = 'flex';
+        });
+    }
+    // Observer for new modals
+    const observer = new MutationObserver(fixModalSize);
+    observer.observe(document.body, { childList: true, subtree: true });
+    // Also recheck on window resize
+    window.addEventListener('resize', fixModalSize);
+});
+
 // Touch swipe down to close modal (mobile)
 (function() {
     let startY = 0, currentY = 0, dragging = false, target = null;

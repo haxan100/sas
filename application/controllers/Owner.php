@@ -8,6 +8,7 @@ class Owner extends CI_Controller {
         $this->load->model(['Toko_model', 'Order_model']);
         $this->load->library(['session', 'upload']);
         $this->load->helper(['url', 'form']);
+        $this->load->helper('Log_helper');
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         $this->output->set_header('Pragma: no-cache');
         $this->output->set_header('Expires: 0');
@@ -26,6 +27,7 @@ class Owner extends CI_Controller {
         if ($row && password_verify($p, $row->password)) {
             $this->session->sess_regenerate(TRUE);
             $this->session->set_userdata(['owner_id' => $row->id, 'owner_nama' => $row->nama]);
+            Log_Helper::log_login('owner', $row->id, $row->nama, null, null);
             redirect('owner/dashboard');
         }
         $this->session->set_flashdata('error', 'Username/password salah');
@@ -33,6 +35,9 @@ class Owner extends CI_Controller {
     }
 
     public function logout() {
+        $owner_id = $this->session->userdata('owner_id');
+        $owner_nama = $this->session->userdata('owner_nama');
+        Log_Helper::log_logout('owner', $owner_id, $owner_nama, null, null);
         $this->session->unset_userdata(['owner_id', 'owner_nama']);
         $this->session->sess_destroy();
         redirect('owner/login');
@@ -59,7 +64,45 @@ class Owner extends CI_Controller {
         $data['total_pendapatan'] = $this->Order_model->total_pendapatan();
         $data['toko'] = $this->Toko_model->get_all();
         $data['order'] = $this->Order_model->get_all();
+        $data['pending_count'] = $this->Toko_model->count_by_status('pending');
+        $data['aktif_count'] = $this->Toko_model->count_by_status('aktif');
         $this->load->view('owner/dashboard', $data);
+    }
+
+    public function verifikasi() {
+        $this->_cek();
+        $data['title'] = 'Verifikasi Toko';
+        $data['pending_toko'] = $this->Toko_model->get_by_status('pending');
+        $data['aktif_toko'] = $this->Toko_model->get_by_status('aktif');
+        $data['all_toko'] = $this->Toko_model->get_all();
+        $data['pending_count'] = $this->Toko_model->count_by_status('pending');
+        $data['aktif_count'] = $this->Toko_model->count_by_status('aktif');
+        $data['total_count'] = $this->Toko_model->count_all();
+        $this->load->view('owner/verifikasi', $data);
+    }
+
+    public function toko_verif($id, $status) {
+        $this->_cek();
+        $valid_status = ['aktif', 'pending', 'nonaktif'];
+        if (!in_array($status, $valid_status)) {
+            echo json_encode(['status' => 'error', 'message' => 'Status tidak valid']);
+            return;
+        }
+        $toko = $this->Toko_model->get_by_id($id);
+        if (!$toko) {
+            echo json_encode(['status' => 'error', 'message' => 'Toko tidak ditemukan']);
+            return;
+        }
+        $old_status = $toko->status;
+        $this->db->where('id', $id);
+        $this->db->update('toko', ['status' => $status]);
+        Log_Helper::log_toko_verified($id, $toko->nama_toko, $this->session->userdata('owner_id'), $this->session->userdata('owner_nama'), $status);
+        $msg = $status === 'aktif' 
+            ? 'Toko "'.$toko->nama_toko.'" telah AKTIF dan bisa digunakan!' 
+            : ($status === 'pending' 
+                ? 'Toko "'.$toko->nama_toko.'" dijadikan pending.' 
+                : 'Toko "'.$toko->nama_toko.'" di-NONAKTIFkan.');
+        echo json_encode(['status' => 'ok', 'message' => $msg]);
     }
 
     // ============= TOKO LIST (dengan DataTable) =============

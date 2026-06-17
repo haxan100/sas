@@ -2,66 +2,273 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Login Admin Toko · SAS TokoRumah</title>
 <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.login-card { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.2); max-width: 420px; width: 100%; }
-.login-icon { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, #ff6b35, #f7931e); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px; box-shadow: 0 8px 24px rgba(255,107,53,.3); }
-.login-title { font-size: 22px; font-weight: 700; color: #111; text-align: center; margin-bottom: 6px; }
-.login-sub { color: #6b7280; font-size: 14px; text-align: center; margin-bottom: 28px; }
+
+body.login-body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #fbbf24 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Animated background blobs */
+body.login-body::before, body.login-body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: .4;
+    z-index: 0;
+    animation: float 20s infinite ease-in-out;
+}
+body.login-body::before { width: 400px; height: 400px; background: #fbbf24; top: -100px; left: -100px; }
+body.login-body::after { width: 300px; height: 300px; background: #ec4899; bottom: -80px; right: -80px; animation-delay: -10s; }
+@keyframes float { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px, 20px) scale(1.1); } }
+
+.login-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.25);
+    max-width: 440px;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    animation: cardIn .5s ease-out;
+}
+@keyframes cardIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.login-header {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: #fff;
+    padding: 32px 32px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.login-header::before { content: ''; position: absolute; right: -30px; top: -30px; width: 100px; height: 100px; background: rgba(255,255,255,.1); border-radius: 50%; }
+.login-header::after { content: ''; position: absolute; left: -20px; bottom: -40px; width: 80px; height: 80px; background: rgba(255,255,255,.08); border-radius: 50%; }
+.login-icon {
+    width: 80px; height: 80px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.2);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,.3);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    margin: 0 auto 16px;
+    position: relative; z-index: 1;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.login-title { font-size: 24px; font-weight: 700; margin: 0 0 6px; position: relative; z-index: 1; }
+.login-sub { font-size: 14px; opacity: .92; margin: 0; position: relative; z-index: 1; }
+
+.login-body-form { padding: 28px 32px 32px; }
+
+.alert {
+    padding: 12px 14px; border-radius: 10px; margin-bottom: 18px; font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    animation: shakeIn .4s;
+}
+@keyframes shakeIn { 0% { transform: translateX(0); } 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } 100% { transform: translateX(0); } }
+.alert-error { background: #fef2f2; color: #b91c1c; border-left: 4px solid #ef4444; }
+
 .form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #374151; }
-.form-control { width: 100%; padding: 11px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; transition: all .15s; }
-.form-control:focus { outline: none; border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255,107,53,.15); }
-.btn-login { width: 100%; padding: 12px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
-.btn-login:hover { background: #1f2937; }
-.alert { padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
-.alert-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
-.login-foot { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #f3f4f6; font-size: 13px; color: #6b7280; }
-.login-foot a { color: #ff6b35; text-decoration: none; font-weight: 500; }
-.login-foot a:hover { text-decoration: underline; }
-.login-hint { background: #fff8f3; padding: 10px 14px; border-radius: 8px; margin-top: 16px; font-size: 12px; color: #6b7280; text-align: center; border: 1px solid #fde0cc; }
-.login-hint strong { color: #ff6b35; }
+.form-label {
+    display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #374151;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.form-input-wrap {
+    position: relative;
+    display: flex; align-items: center;
+}
+.form-input-wrap .form-control { padding-right: 44px; }
+.form-input-wrap .icon-left { position: absolute; left: 12px; color: #9ca3af; font-size: 16px; pointer-events: none; }
+.form-input-wrap .icon-right { position: absolute; right: 8px; background: none; border: none; color: #9ca3af; cursor: pointer; padding: 6px; border-radius: 6px; transition: all .15s; }
+.form-input-wrap .icon-right:hover { color: #ff6b35; background: #fff3e0; }
+.form-input-wrap.has-icon .form-control { padding-left: 40px; }
+
+.form-control {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all .15s;
+    background: #fafafa;
+    font-family: inherit;
+}
+.form-control:focus { outline: none; border-color: #ff6b35; background: #fff; box-shadow: 0 0 0 4px rgba(255,107,53,.12); }
+.form-control::placeholder { color: #b5b8c0; }
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+.btn-login::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+    transition: left .6s;
+}
+.btn-login:hover::before { left: 100%; }
+.btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,107,53,.35); }
+.btn-login:active { transform: translateY(0); }
+.btn-login:disabled { opacity: .7; cursor: not-allowed; transform: none !important; }
+
+.btn-login .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.login-divider {
+    display: flex; align-items: center; gap: 12px; margin: 18px 0; color: #9ca3af; font-size: 12px; font-weight: 500;
+}
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+
+.login-foot {
+    text-align: center; padding: 20px 24px;
+    background: #fafbfc;
+    border-top: 1px solid #f3f4f6;
+    font-size: 13px; color: #6b7280;
+}
+.login-foot a { color: #ff6b35; text-decoration: none; font-weight: 600; transition: color .15s; }
+.login-foot a:hover { color: #d65a2b; text-decoration: underline; }
+.login-foot .divider { color: #d1d5db; margin: 0 8px; }
+
+.demo-hint {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 16px;
+    font-size: 12px;
+    color: #92400e;
+    text-align: center;
+    line-height: 1.5;
+}
+.demo-hint strong { color: #78350f; display: block; margin-bottom: 4px; font-size: 13px; }
+.demo-hint code { background: #fff; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #b45309; }
+
+@media(max-width: 480px) {
+    .login-card { border-radius: 16px; }
+    .login-header { padding: 28px 20px 20px; }
+    .login-body-form { padding: 22px 20px 24px; }
+    .login-icon { width: 70px; height: 70px; font-size: 36px; }
+    .login-title { font-size: 20px; }
+}
 </style>
 </head>
-<body>
+<body class="login-body">
 <div class="login-card">
+<div class="login-header">
 <div class="login-icon">🏪</div>
 <h1 class="login-title">Login Admin Toko</h1>
 <p class="login-sub">Masuk untuk kelola tokomu</p>
+</div>
 
+<div class="login-body-form">
 <?php if ($this->session->flashdata('error')): ?>
-<div class="alert alert-error"><?= $this->session->flashdata('error') ?></div>
+<div class="alert alert-error">
+<span>⚠️</span>
+<span><?= $this->session->flashdata('error') ?></span>
+</div>
 <?php endif; ?>
 
-<form method="post" action="<?= base_url('admin/do_login') ?>">
+<form method="post" action="<?= base_url('admin/do_login') ?>" id="loginForm" autocomplete="on">
 <div class="form-group">
-<label>Username</label>
-<input type="text" name="username" class="form-control" required autofocus placeholder="Masukkan username">
+<label class="form-label">Username</label>
+<div class="form-input-wrap has-icon">
+<span class="icon-left">👤</span>
+<input type="text" name="username" id="username" class="form-control" required autofocus placeholder="Masukkan username" autocomplete="username" autocapitalize="off" autocorrect="off">
+</div>
 </div>
 <div class="form-group">
-<label>Password</label>
-<input type="password" name="password" class="form-control" required placeholder="Masukkan password">
+<label class="form-label">Password</label>
+<div class="form-input-wrap has-icon">
+<span class="icon-left">🔒</span>
+<input type="password" name="password" id="password" class="form-control" required placeholder="Masukkan password" autocomplete="current-password">
+<button type="button" class="icon-right" onclick="togglePassword()" title="Lihat password" id="pwToggle">👁️</button>
 </div>
-<button type="submit" class="btn-login">Masuk</button>
+</div>
+<button type="submit" class="btn-login" id="btnSubmit">
+<span id="btnText">🔓 Masuk ke Dashboard</span>
+</button>
 </form>
 
 <?php if (ENVIRONMENT === 'development'): ?>
-<div class="login-hint">
-<strong>Mode Development:</strong><br>
-Akun demo akan tersedia setelah install.<br>
-Gunakan akun toko yang telah dibuat Owner.
+<div class="demo-hint">
+<strong>🔑 Akun Demo (Development)</strong>
+Username: <code>admin</code> &nbsp; Password: <code>admin123</code><br>
+<span style="font-size:11px;">Atau login pakai akun toko dari Owner</span>
 </div>
 <?php endif; ?>
+</div>
 
 <div class="login-foot">
-<a href="<?= base_url('owner') ?>">Login Owner (Super Admin)</a>
- ·
+<a href="<?= base_url('admin/register') ?>" style="color:#ff6b35;font-weight:700;">🏪 Daftar Toko Baru</a>
+<span class="divider">·</span>
 <a href="<?= base_url() ?>">← Beranda</a>
+<span class="divider">·</span>
 </div>
 </div>
+
+<script>
+function togglePassword() {
+    const pw = document.getElementById('password');
+    const btn = document.getElementById('pwToggle');
+    if (pw.type === 'password') {
+        pw.type = 'text';
+        btn.textContent = '🙈';
+        btn.title = 'Sembunyikan';
+    } else {
+        pw.type = 'password';
+        btn.textContent = '👁️';
+        btn.title = 'Lihat password';
+    }
+}
+
+// Loading state on submit
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('btnSubmit');
+    const text = document.getElementById('btnText');
+    btn.disabled = true;
+    text.innerHTML = '<span class="spinner"></span> Memproses...';
+});
+
+// Auto-focus & error shake
+const url = new URL(window.location);
+if (url.searchParams.get('err')) {
+    document.getElementById('username').focus();
+}
+
+// Touch feedback for input
+document.querySelectorAll('.form-control').forEach(input => {
+    input.addEventListener('focus', () => input.parentElement.classList.add('focused'));
+    input.addEventListener('blur', () => input.parentElement.classList.remove('focused'));
+});
+</script>
 </body>
 </html>

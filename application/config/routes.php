@@ -56,9 +56,27 @@ $route['translate_uri_dashes'] = FALSE;
 // Install
 $route['install'] = 'install/index';
 
+// Register
+$route['register'] = 'register/index';
+$route['register/submit'] = 'register/submit';
+$route['register/success'] = 'register/success';
+
+// Logs
+$route['logs'] = 'logs/index';
+$route['logs/get_logs'] = 'logs/get_logs';
+$route['logs/stats'] = 'logs/stats';
+$route['logs/filters'] = 'logs/filters';
+$route['logs/export_csv'] = 'logs/export_csv';
+$route['logs/clear_old_logs'] = 'logs/clear_old_logs';
+
 // 404
 $route['notfound'] = 'main/notfound';
 $route['404'] = 'main/notfound';
+
+// Public tutorial (no login required)
+$route['tutorial'] = 'main/tutorial';
+$route['tutorial/pembeli'] = 'main/tutorial_pembeli';
+$route['tutorial/penjual'] = 'main/tutorial_penjual';
 
 // Owner (Super Admin) - diakses di /owner
 $route['owner'] = 'owner/login';
@@ -86,6 +104,9 @@ $route['admin/orders'] = 'admin/orders';
 $route['admin/kategori'] = 'admin/kategori';
 $route['admin/pengaturan'] = 'admin/pengaturan';
 $route['admin/akun'] = 'admin/akun';
+$route['admin/welcome'] = 'admin/welcome';
+$route['admin/skip_tour'] = 'admin/skip_tour';
+$route['admin/reset_tour'] = 'admin/reset_tour';
 $route['admin/update_pengaturan'] = 'admin/update_pengaturan';
 $route['admin/update_akun'] = 'admin/update_akun';
 $route['admin/produk_save'] = 'admin/produk_save';
@@ -103,6 +124,6 @@ $route['admin/kategori_hapus/(:num)'] = 'admin/kategori_hapus/$1';
 // Toko - Halaman User (pelanggan)
 // Catch-all di paling bawah - exclude 'admin', 'owner', 'install', 'sas' dan 'index'
 // 'sas' = project subfolder (root URL), 'index' = CI default page
-$route['(?!admin|owner|install|sas|index|assets)([^/]+)'] = 'toko/route/$1';
-$route['(?!admin|owner|install|sas|index|assets)([^/]+)/user/toko'] = 'toko/order/$1';
-$route['(?!admin|owner|install|sas|index|assets)([^/]+)/submit_order'] = 'toko/submit_order/$1';
+$route['(?!admin|owner|install|sas|index|assets|register)([^/]+)'] = 'toko/route/$1';
+$route['(?!admin|owner|install|sas|index|assets|register)([^/]+)/user/toko'] = 'toko/order/$1';
+$route['(?!admin|owner|install|sas|index|assets|register)([^/]+)/submit_order'] = 'toko/submit_order/$1';

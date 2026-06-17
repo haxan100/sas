@@ -249,38 +249,50 @@ table.dataTable tbody tr:last-child td { border-bottom: none; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid .full { grid-column: span 2; }
 
-/* Modal shadcn */
+/* Modal shadcn - desktop & mobile friendly */
 .admin-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
 .admin-modal.show { display: flex; animation: fadeIn .2s; }
-.admin-modal-content { background: #fff; width: 100%; max-width: 600px; max-height: 90vh; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25); display: flex; flex-direction: column; animation: slideUp .25s; }
+.admin-modal-content { background: #fff; width: 100%; max-width: 600px; max-height: 95vh; height: auto; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25); display: flex; flex-direction: column; animation: slideUp .25s; overflow: hidden; position: relative; min-height: 0; }
 .admin-modal-content.lg { max-width: 800px; }
-.admin-modal-head { padding: 18px 24px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.admin-modal-head { padding: 18px 24px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; flex: 0 0 auto; }
 .admin-modal-head h3 { font-size: 17px; color: #111; font-weight: 700; }
-.admin-modal-body { padding: 22px 24px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
-.admin-modal-foot { padding: 14px 24px; border-top: 1px solid #f3f4f6; display: flex; justify-content: flex-end; gap: 8px; background: #fafafa; border-radius: 0 0 12px 12px; flex-shrink: 0; }
+.admin-modal-body { padding: 22px 24px; overflow-y: auto; flex: 1 1 0%; min-height: 0; max-height: 100%; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.admin-modal-body::-webkit-scrollbar { width: 6px; }
+.admin-modal-body::-webkit-scrollbar-track { background: transparent; }
+.admin-modal-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.admin-modal-foot { padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 8px; background: #fff; flex: 0 0 auto; flex-shrink: 0; flex-grow: 0; position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -4px 12px rgba(0,0,0,.08); }
+.admin-modal-close { background: none; border: none; width: 32px; height: 32px; border-radius: 6px; font-size: 20px; color: #6b7280; cursor: pointer; }
+.admin-modal-close:hover { background: #f3f4f6; color: #111; }
 .admin-modal-close { background: none; border: none; width: 32px; height: 32px; border-radius: 6px; font-size: 20px; color: #6b7280; cursor: pointer; }
 .admin-modal-close:hover { background: #f3f4f6; color: #111; }
 
-/* Mobile modal - bottom sheet style */
+/* Mobile modal - bottom sheet, full-height seperti app native */
 @media(max-width: 700px) {
   .admin-modal { padding: 0; align-items: flex-end; }
   .admin-modal-content {
-    width: 100%; max-width: 100%; max-height: 92vh;
+    width: 100%;
+    max-width: 100%;
+    max-height: 96vh;
     border-radius: 20px 20px 0 0;
     animation: slideUpSheet .3s;
   }
   .admin-modal-content.lg { max-width: 100%; }
+  .admin-modal-head { padding: 14px 20px; }
+  .admin-modal-body { padding: 18px 20px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .admin-modal-foot {
-    border-radius: 0;
+    padding: 14px 20px 16px;
     padding-bottom: max(14px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(0,0,0,.1);
+    background: #fff;
   }
-  .admin-modal-body { padding: 18px; }
   /* Swipe handle for bottom sheet */
   .admin-modal-content::before {
     content: '';
     display: block; width: 40px; height: 4px;
     background: #d1d5db; border-radius: 2px;
     margin: 8px auto 0;
+    position: relative;
+    z-index: 1;
   }
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -361,20 +373,6 @@ table.dataTable tbody tr:hover { background: #f8fafc; }
 .dataTables_wrapper .dataTables_info { color: #7f8c8d; font-size: 12px; padding-top: 14px; }
 .dataTables_wrapper .dataTables_paginate .paginate_button { padding: 6px 12px !important; border-radius: 6px !important; margin: 0 2px; }
 .dataTables_wrapper .dataTables_paginate .paginate_button.current { background: linear-gradient(135deg, #3498db, #2980b9) !important; color: #fff !important; border: none !important; }
-
-/* Modal modern */
-.admin-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.admin-modal.show { display: flex; animation: fadeIn .2s; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.admin-modal-content { background: #fff; width: 90%; max-width: 600px; max-height: 90vh; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.3); display: flex; flex-direction: column; animation: slideDown .3s; }
-@keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.admin-modal-content.lg { max-width: 800px; }
-.admin-modal-head { padding: 18px 24px; border-bottom: 1px solid #f0f3f7; display: flex; justify-content: space-between; align-items: center; }
-.admin-modal-head h3 { font-size: 18px; color: #2c3e50; font-weight: 700; }
-.admin-modal-close { background: #f0f3f7; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; color: #7f8c8d; cursor: pointer; transition: all .2s; }
-.admin-modal-close:hover { background: #e74c3c; color: #fff; }
-.admin-modal-body { padding: 24px; overflow-y: auto; flex: 1; }
-.admin-modal-foot { padding: 16px 24px; border-top: 1px solid #f0f3f7; display: flex; justify-content: flex-end; gap: 10px; background: #fafbfc; border-radius: 0 0 16px 16px; }
 
 /* Form modern */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

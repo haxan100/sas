@@ -8,6 +8,7 @@ class Admin extends CI_Controller {
         $this->load->model(['Toko_model', 'Produk_model', 'Order_model', 'Kategori_model']);
         $this->load->library(['session', 'upload']);
         $this->load->helper(['url', 'form']);
+        $this->load->helper('Log_helper');
         // Prevent caching of auth-protected pages
         $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         $this->output->set_header('Pragma: no-cache');
@@ -22,17 +23,76 @@ class Admin extends CI_Controller {
         $this->load->view('admin/login');
     }
 
+    public function register() {
+        if ($this->session->userdata('toko_id')) {
+            redirect('admin/dashboard');
+        }
+        $this->load->view('admin/register');
+    }
+
+    public function do_register() {
+        $this->load->library('form_validation');
+        
+        $this->form_validation->set_rules('nama_toko', 'Nama Toko', 'required|min_length[3]|max_length[100]');
+        $this->form_validation->set_rules('pemilik', 'Nama Pemilik', 'required|min_length[3]|max_length[100]');
+        $this->form_validation->set_rules('username', 'Username', 'required|min_length[3]|max_length[50]|is_unique[toko.username]');
+        $this->form_validation->set_rules('password', 'Password', 'required|min_length[4]');
+        $this->form_validation->set_rules('no_wa', 'No WhatsApp', 'required|min_length[10]|max_length[15]');
+
+        if ($this->form_validation->run() == FALSE) {
+            $errors = validation_errors();
+            $this->session->set_flashdata('error', strip_tags($errors));
+            redirect('admin/register');
+            return;
+        }
+
+        $nama_toko = trim($this->input->post('nama_toko'));
+        $username = trim(strtolower($this->input->post('username')));
+        $slug = url_title($nama_toko, '-', true);
+        
+        $existing_slug = $this->db->get_where('toko', ['slug' => $slug])->row();
+        if ($existing_slug) {
+            $slug = $slug . '-' . substr(md5(uniqid()), 0, 5);
+        }
+
+        $data = [
+            'nama_toko' => $nama_toko,
+            'pemilik' => trim($this->input->post('pemilik')),
+            'username' => $username,
+            'password' => $this->input->post('password'),
+            'slug' => $slug,
+            'no_wa' => preg_replace('/[^0-9]/', '', $this->input->post('no_wa')),
+            'kategori' => $this->input->post('kategori') ?: 'Makanan',
+            'alamat' => $this->input->post('alamat'),
+            'nama_bank' => $this->input->post('nama_bank'),
+            'no_rek' => $this->input->post('no_rek'),
+            'atas_nama' => $this->input->post('atas_nama'),
+            'status' => 'pending',
+            'tema_warna' => '#ff6b35',
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $this->db->insert('toko', $data);
+        
+        $this->session->set_flashdata('sukses', 'Pendaftaran berhasil! Toko Anda sedang ditinjau oleh Owner. Kami akan menghubungi Anda via WhatsApp untuk konfirmasi aktivasi.');
+        redirect('admin/register');
+    }
+
     public function do_login() {
         $u = $this->input->post('username');
         $p = $this->input->post('password');
-        // Cari toko dengan username/password matching
         $toko = $this->Toko_model->get_by_username($u);
         if ($toko && password_verify($p, $toko->password)) {
+            if ($toko->status == 'pending') {
+                $this->session->set_flashdata('error', 'Akun Anda belum diverifikasi oleh Owner. Mohon tunggu konfirmasi aktivasi.');
+                redirect('admin');
+                return;
+            }
             if ($toko->status != 'aktif') {
                 $this->session->set_flashdata('error', 'Toko ini nonaktif. Hubungi owner.');
                 redirect('admin');
+                return;
             }
-            // Destroy old session, start fresh to prevent fixation
             $this->session->sess_regenerate(TRUE);
             $this->session->set_userdata([
                 'toko_id' => $toko->id,
@@ -41,6 +101,7 @@ class Admin extends CI_Controller {
                 'toko_tema' => $toko->tema_warna,
                 'is_admin' => true,
             ]);
+            Log_Helper::log_login('admin', $toko->id, $toko->username, $toko->id, $toko->nama_toko);
             redirect('admin/dashboard');
         }
         $this->session->set_flashdata('error', 'Username/password salah');
@@ -48,6 +109,9 @@ class Admin extends CI_Controller {
     }
 
     public function logout() {
+        $toko_id = $this->session->userdata('toko_id');
+        $toko_nama = $this->session->userdata('toko_nama');
+        Log_Helper::log_logout('admin', $toko_id, $this->session->userdata('toko_slug'), $toko_id, $toko_nama);
         $this->session->unset_userdata(['toko_id', 'toko_slug', 'toko_nama', 'toko_tema', 'is_admin']);
         redirect('admin');
     }
@@ -78,6 +142,11 @@ class Admin extends CI_Controller {
     // ============= PAGES =============
     public function dashboard() {
         $toko = $this->_cek();
+        // First-time login: redirect to welcome
+        if (empty($toko->onboarding_done) || $toko->onboarding_done == 0) {
+            redirect('admin/welcome');
+            return;
+        }
         $data['toko'] = $toko;
         $data['title'] = 'Dashboard - '.$toko->nama_toko;
         $data['produk'] = $this->Produk_model->get_by_toko($toko->id);
@@ -121,6 +190,25 @@ class Admin extends CI_Controller {
         $data['toko'] = $toko;
         $data['title'] = 'Akun - '.$toko->nama_toko;
         $this->load->view('admin/akun', $data);
+    }
+
+    public function welcome() {
+        $toko = $this->_cek();
+        $data['toko'] = $toko;
+        $data['title'] = 'Selamat Datang - '.$toko->nama_toko;
+        $this->load->view('admin/welcome', $data);
+    }
+
+    public function skip_tour() {
+        $toko = $this->_cek();
+        $this->Toko_model->mark_onboarding_done($toko->id);
+        echo json_encode(['status' => 'ok']);
+    }
+
+    public function reset_tour() {
+        $toko = $this->_cek();
+        $this->Toko_model->reset_onboarding($toko->id);
+        echo json_encode(['status' => 'ok']);
     }
 
     public function update_akun() {
@@ -194,6 +282,9 @@ class Admin extends CI_Controller {
         }
         if ($this->upload->do_upload('logo')) {
             $data['logo'] = $this->upload->data('file_name');
+        }
+        if ($this->upload->do_upload('cover_photo')) {
+            $data['cover_photo'] = $this->upload->data('file_name');
         }
         $this->Toko_model->update($toko->id, $data);
         $this->session->set_userdata('toko_nama', $this->input->post('nama_toko'));
@@ -289,11 +380,14 @@ class Admin extends CI_Controller {
         if ($foto) $data['foto'] = $foto;
 
         if ($id) {
+            $old_produk = $this->Produk_model->get_by_id($id);
             $this->Produk_model->update($id, $data);
+            Log_Helper::log_produk_updated($toko->id, $toko->nama_toko, $toko->id, $toko->username, $old_produk->nama_produk, (array)$old_produk, $data);
             echo json_encode(['status' => 'ok', 'message' => 'Produk diupdate']);
         } else {
             $data['toko_id'] = $toko->id;
             $this->Produk_model->insert($data);
+            Log_Helper::log_produk_created($toko->id, $toko->nama_toko, $toko->id, $toko->username, $data['nama_produk']);
             echo json_encode(['status' => 'ok', 'message' => 'Produk ditambah']);
         }
     }
@@ -316,6 +410,7 @@ class Admin extends CI_Controller {
             return;
         }
         $this->Produk_model->delete($id);
+        Log_Helper::log_produk_deleted($toko->id, $toko->nama_toko, $toko->id, $toko->username, $p->nama_produk);
         echo json_encode(['status' => 'ok', 'message' => 'Produk dihapus']);
     }
 
@@ -366,11 +461,14 @@ class Admin extends CI_Controller {
             echo json_encode(['status' => 'error', 'message' => 'Order tidak ditemukan']);
             return;
         }
+        $old_status_order = $order->status_order;
+        $old_status_bayar = $order->status_bayar;
         $data = [
             'status_order' => $this->input->post('status_order'),
             'status_bayar' => $this->input->post('status_bayar'),
         ];
         $this->Order_model->update_status($id, $data);
+        Log_Helper::log_order_updated($toko->id, $toko->nama_toko, $toko->id, $toko->username, $order->kode_order, $old_status_order . '/' . $old_status_bayar, $data['status_order'] . '/' . $data['status_bayar']);
         echo json_encode(['status' => 'ok', 'message' => 'Order diupdate']);
     }
 

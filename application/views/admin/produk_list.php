@@ -254,7 +254,16 @@ function openProdukModal() {
     document.getElementById('pStok').value = '100';
     document.getElementById('pStatus').value = 'tersedia';
     document.getElementById('fotoNote').textContent = '*Upload foto produk (opsional)';
-    document.getElementById('produkModal').classList.add('show');
+    const modal = document.getElementById('produkModal');
+    modal.classList.add('show');
+    setTimeout(() => {
+        modal.querySelector('.admin-modal-content').style.display = 'flex';
+        const body = modal.querySelector('.admin-modal-body');
+        body.style.maxHeight = 'calc(100vh - 160px)';
+        body.style.overflowY = 'auto';
+        document.getElementById('pNama').focus();
+    }, 50);
+}
     setTimeout(() => document.getElementById('pNama').focus(), 100);
 }
 
@@ -283,9 +292,16 @@ function editProduk(id) {
             document.getElementById('pStok').value = p.stok || 0;
             document.getElementById('pStatus').value = p.status || 'tersedia';
             document.getElementById('fotoNote').textContent = '*Kosongkan jika tidak ingin ganti. File saat ini: ' + (p.foto || 'tidak ada');
-            document.getElementById('produkModal').classList.add('show');
+            const modal = document.getElementById('produkModal');
+            modal.classList.add('show');
+            setTimeout(() => {
+                modal.querySelector('.admin-modal-content').style.display = 'flex';
+                const body = modal.querySelector('.admin-modal-body');
+                body.style.maxHeight = 'calc(100vh - 160px)';
+                body.style.overflowY = 'auto';
+            }, 50);
         });
-}
+    }
 
 function hapusProduk(id) {
     if (!confirm('Hapus produk ini?')) return;

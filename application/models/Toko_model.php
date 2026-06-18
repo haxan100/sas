@@ -63,3 +63,4 @@ class Toko_model extends CI_Model {
         return $this->db->where('id', $id)->update('toko', ['onboarding_done' => 0]);
     }
 }
+

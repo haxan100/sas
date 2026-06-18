@@ -187,6 +187,9 @@ class Owner extends CI_Controller {
         $logo = null;
         if ($this->upload->do_upload('logo')) {
             $logo = $this->upload->data('file_name');
+        } else {
+            $upload_error = $this->upload->display_errors('', '');
+            log_message('error', 'Upload gagal: ' . $upload_error);
         }
 
         $data = [

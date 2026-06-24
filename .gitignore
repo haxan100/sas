@@ -33,3 +33,4 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 
 # Local deployment config (contains DB credentials)
 application/config/database.php
+assets/uploads/*

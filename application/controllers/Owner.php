@@ -175,21 +175,28 @@ class Owner extends CI_Controller {
 
     // ============= CRUD TOKO (modal-based) =============
     public function toko_save() {
+        
         $this->_cek();
         $id = $this->input->post('id');
 
         $config['upload_path'] = './assets/uploads/';
         $config['allowed_types'] = 'gif|jpg|jpeg|png';
         $config['max_size'] = 2048;
-        $config['file_name'] = 'logo_'.time();
         $this->load->library('upload', $config);
 
         $logo = null;
+        $cover = null;
+        
+        $config['file_name'] = 'logo_'.time();
+        $this->upload->initialize($config);
         if ($this->upload->do_upload('logo')) {
             $logo = $this->upload->data('file_name');
-        } else {
-            $upload_error = $this->upload->display_errors('', '');
-            log_message('error', 'Upload gagal: ' . $upload_error);
+        }
+
+        $config['file_name'] = 'cover_'.time();
+        $this->upload->initialize($config);
+        if ($this->upload->do_upload('cover_photo')) {
+            $cover = $this->upload->data('file_name');
         }
 
         $data = [
@@ -209,6 +216,7 @@ class Owner extends CI_Controller {
             $data['password'] = $this->input->post('password');
         }
         if ($logo) $data['logo'] = $logo;
+        if ($cover) $data['cover_photo'] = $cover;
         if ($id) {
             $data['status'] = $this->input->post('status') ?: 'aktif';
             $this->Toko_model->update($id, $data);

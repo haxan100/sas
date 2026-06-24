@@ -131,9 +131,14 @@
 <input type="color" name="tema_warna" id="tWarna" value="#ff6b35" class="form-control" style="height:44px;width:80px;padding:2px;">
 </div>
 <div class="form-group">
-<label class="form-label">Status</label>
+<label class="form-label">Logo Toko</label>
 <input type="file" name="logo" id="tLogo" class="form-control" accept="image/*">
 <small id="tLogoHint" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;">*Upload logo (opsional)</small>
+</div>
+<div class="form-group">
+<label class="form-label">Cover Toko (Banner)</label>
+<input type="file" name="cover_photo" id="tCover" class="form-control" accept="image/*">
+<small id="tCoverHint" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;">*Upload cover/banner (opsional)</small>
 </div>
 </div>
 </div>
@@ -234,15 +239,14 @@ function openTokoModal() {
     document.getElementById('tPasswordHint').textContent = '*Wajib untuk toko baru';
     document.getElementById('tWarna').value = '#ff6b35';
     document.getElementById('tLogoHint').textContent = '*Upload logo (opsional)';
+    document.getElementById('tCoverHint').textContent = '*Upload cover/banner (opsional)';
     document.getElementById('statusField').style.display = 'none';
     const modal = document.getElementById('tokoModal');
     modal.classList.add('show');
-    // Force layout recalc
     setTimeout(() => {
         modal.querySelector('.admin-modal-content').style.display = 'flex';
         const body = modal.querySelector('.admin-modal-body');
-        // Ensure body is scrollable
-        body.style.maxHeight = 'calc(100vh - 160px)';
+        body.style.maxHeight = 'calc(100vh - 180px)';
         body.style.overflowY = 'auto';
         document.getElementById('tNama').focus();
     }, 50);
@@ -276,6 +280,7 @@ function editToko(id) {
             document.getElementById('tWarna').value = t.tema_warna || '#ff6b35';
             document.getElementById('tStatus').value = t.status || 'aktif';
             document.getElementById('tLogoHint').textContent = '*Kosongkan jika tidak ingin ganti. File: ' + (t.logo || 'tidak ada');
+            document.getElementById('tCoverHint').textContent = '*Kosongkan jika tidak ingin ganti. File: ' + (t.cover_photo || 'tidak ada');
             document.getElementById('statusField').style.display = 'block';
             const modal = document.getElementById('tokoModal');
             modal.classList.add('show');

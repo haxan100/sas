@@ -344,9 +344,56 @@ body { background: #f5f7fb; }
 </div>
 
 <div class="rek-info" id="rekInfo" style="display:none;">
-<strong>💳 Rekening Tujuan:</strong><br>
-<?= $toko->nama_bank ?: '-' ?> : <strong><?= $toko->no_rek ?: '-' ?></strong><br>
-a.n. <?= $toko->atas_nama ?: '-' ?>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+<strong>💳 Transfer ke Rekening Toko:</strong>
+<button type="button" class="info-btn-user" onclick="showUserPayInfo()" title="Info pembayaran">?</button>
+</div>
+<span style="font-size:12px;opacity:0.8;">Bank:</span> <?= $toko->nama_bank ?: '-' ?><br>
+<span style="font-size:12px;opacity:0.8;">No Rek:</span> <span class="rek-num"><?= $toko->no_rek ?: '-' ?></span><br>
+<span style="font-size:12px;opacity:0.8;">a.n.</span> <?= $toko->atas_nama ?: '-' ?>
+<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(21,101,192,0.2);font-size:11px;color:#1565c0;">
+✅ Bayar langsung ke rekening toko<br>
+✅ Tidak ada potongan biaya admin
+</div>
+</div>
+
+<!-- User Payment Info Modal -->
+<div class="user-modal-overlay" id="userPayModalOverlay" onclick="closeUserPayInfo()">
+<div class="user-modal" id="userPayModal">
+<button class="user-modal-close" onclick="closeUserPayInfo()">✕</button>
+<div class="user-modal-content">
+<div class="user-modal-header">
+<div class="user-modal-icon">💳</div>
+<h3>Informasi Pembayaran Transfer</h3>
+</div>
+<div class="user-modal-body">
+<p>Saat Anda memilih metode <strong>Transfer Bank</strong>, Anda akan membayar langsung ke rekening toko.</p>
+<div class="user-highlight">
+<span class="user-highlight-icon">✅</span>
+<div>
+<strong>Keuntungan untuk Anda:</strong>
+<ul>
+<li>Tidak ada biaya admin/potongan</li>
+<li>Uang langsung masuk ke rekening toko</li>
+<li>Transaksi lebih aman & transparan</li>
+</ul>
+</div>
+</div>
+<div class="user-highlight user-highlight-blue">
+<span class="user-highlight-icon">ℹ️</span>
+<div>
+<strong>Cara Transfer:</strong>
+<ol>
+<li>Salin nomor rekening yang tertera</li>
+<li>Buka aplikasi m-banking Anda</li>
+<li>Transfer sesuai total pesanan</li>
+<li>Centang "Sudah transfer" jika sudah selesai</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 
 <label class="checkbox-row" id="sudahTfRow" style="display:none;">
@@ -657,6 +704,188 @@ function filterProduk() {
     });
     document.getElementById('emptyFilter').style.display = visible === 0 ? 'block' : 'none';
 }
+
+// User Payment Info Modal Functions
+function showUserPayInfo() {
+    const overlay = document.getElementById('userPayModalOverlay');
+    const modal = document.getElementById('userPayModal');
+    overlay.classList.add('show');
+    setTimeout(() => modal.classList.add('show'), 10);
+    document.body.style.overflow = 'hidden';
+}
+
+function closeUserPayInfo() {
+    const overlay = document.getElementById('userPayModalOverlay');
+    const modal = document.getElementById('userPayModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+    }, 300);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeUserPayInfo();
+});
 </script>
+
+<style>
+.info-btn-user {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.info-btn-user:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(59,130,246,0.4);
+}
+
+.user-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+.user-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.user-modal {
+    background: #fff;
+    border-radius: 20px;
+    max-width: 400px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+}
+.user-modal.show {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.user-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 1;
+}
+.user-modal-close:hover {
+    background: #e5e7eb;
+    color: #111;
+}
+
+.user-modal-content {
+    padding: 24px;
+}
+
+.user-modal-header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+.user-modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 10px;
+}
+.user-modal-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+}
+
+.user-modal-body {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.6;
+}
+.user-modal-body p {
+    margin: 0 0 12px;
+}
+
+.user-highlight {
+    background: linear-gradient(135deg, #dcfce7, #86efac);
+    border: 1px solid #4ade80;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    margin: 12px 0;
+}
+.user-highlight-blue {
+    background: linear-gradient(135deg, #dbeafe, #93c5fd);
+    border-color: #60a5fa;
+}
+.user-highlight-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.user-highlight ul,
+.user-highlight ol {
+    margin: 6px 0 0;
+    padding-left: 16px;
+    font-size: 12px;
+}
+.user-highlight li {
+    margin: 3px 0;
+}
+
+@media(max-width: 480px) {
+    .user-modal {
+        border-radius: 16px 16px 0 0;
+        max-height: 90vh;
+    }
+    .user-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+}
+</style>
 </body>
 </html>

@@ -34,6 +34,34 @@
             font-family: monospace;
             font-weight: 600;
         }
+
+        .setting-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .help-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-btn:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+        }
     </style>
 </head>
 
@@ -87,7 +115,10 @@
                         </div>
 
                         <div class="setting-card">
-                            <div class="setting-head">💳 Pembayaran</div>
+                            <div class="setting-head">
+                                <span>💳 Pembayaran</span>
+                                <button type="button" class="help-btn" onclick="showPaymentInfo()" title="Informasi Pembayaran">?</button>
+                            </div>
                             <div class="setting-body two-col">
                                 <div class="form-group">
                                     <label class="form-label">Nama Bank</label>
@@ -180,6 +211,28 @@
         const cp = document.getElementById('colorPicker');
         const ct = document.getElementById('colorText');
         if (cp) cp.addEventListener('input', () => ct.value = cp.value);
+
+        function showPaymentInfo() {
+            Swal.fire({
+                icon: 'info',
+                title: '<span style="font-size:18px;">Informasi Pembayaran</span>',
+                html: `
+                    <div style="text-align:left;font-size:14px;line-height:1.7;">
+                        <p style="margin-bottom:12px;">📌 <strong>Informasi ini akan ditampilkan kepada pembeli</strong></p>
+                        <ul style="margin:0;padding-left:20px;">
+                            <li style="margin-bottom:8px;">Pembeli akan mentransfer ke rekening yang tertera di atas.</li>
+                            <li style="margin-bottom:8px;">Pastikan <strong>nomor rekening sudah benar</strong> sebelum menyimpan.</li>
+                            <li style="margin-bottom:8px;">✅ <strong>Kami tidak memungut biaya apapun</strong> dari transaksi Anda.</li>
+                            <li>Semua nominal transfer masuk langsung ke rekening Anda.</li>
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: '✓ Mengerti',
+                confirmButtonColor: '#3b82f6',
+                width: '420px',
+                padding: '20px'
+            });
+        }
     </script>
     <script src="<?= base_url('assets/js/admin.js') ?>"></script>
 </body>

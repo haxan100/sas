@@ -465,6 +465,7 @@ $config['csrf_regenerate'] = TRUE;
 $config['csrf_exclude_uris'] = array(
     '.*/submit_order',
     'admin/do_login',
+    'admin/do_register',
     'owner/do_login',
     'admin/orders_ajax',
     'admin/produk_ajax',
@@ -474,6 +475,7 @@ $config['csrf_exclude_uris'] = array(
     'admin/order_get/\d+',
     'admin/kategori_get/\d+',
     'admin/produk_save',
+    'admin/produk_bulk_action',
     'admin/kategori_save',
     'admin/update_akun',
     'admin/update_pengaturan',
@@ -485,7 +487,9 @@ $config['csrf_exclude_uris'] = array(
     'admin/kategori_hapus/\d+',
     'admin/order_update/\d+',
     'admin/skip_tour',
-    'admin/reset_tour'
+    'admin/reset_tour',
+    'admin/check_username',
+    'admin/check_wa'
 );
 
 /*

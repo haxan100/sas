@@ -36,18 +36,26 @@ class Admin extends CI_Controller
 
     public function do_register()
     {
+        header('Content-Type: application/json');
         $this->load->library('form_validation');
 
         $this->form_validation->set_rules('nama_toko', 'Nama Toko', 'required|min_length[3]|max_length[100]');
         $this->form_validation->set_rules('pemilik', 'Nama Pemilik', 'required|min_length[3]|max_length[100]');
-        $this->form_validation->set_rules('username', 'Username', 'required|min_length[3]|max_length[50]|is_unique[toko.username]');
+        $this->form_validation->set_rules('username', 'Username', 'required|min_length[3]|max_length[50]|callback_check_username_unique');
         $this->form_validation->set_rules('password', 'Password', 'required|min_length[4]');
-        $this->form_validation->set_rules('no_wa', 'No WhatsApp', 'required|min_length[10]|max_length[15]');
+        $this->form_validation->set_rules('no_wa', 'No WhatsApp', 'required|callback_validate_wa_format|callback_check_wa_unique');
+        $this->form_validation->set_rules('nama_bank', 'Nama Bank', 'required');
+        $this->form_validation->set_rules('no_rek', 'No Rekening', 'required|min_length[5]|max_length[30]');
+        $this->form_validation->set_rules('atas_nama', 'Atas Nama Rekening', 'required|min_length[3]|max_length[100]');
 
         if ($this->form_validation->run() == FALSE) {
-            $errors = validation_errors();
-            $this->session->set_flashdata('error', strip_tags($errors));
-            redirect('admin/register');
+            $errors = strip_tags(validation_errors());
+            echo json_encode([
+                'status' => 'error',
+                'message' => $errors,
+                'csrf' => $this->security->get_csrf_hash(),
+                'csrf_name' => $this->security->get_csrf_token_name()
+            ]);
             return;
         }
 
@@ -60,27 +68,108 @@ class Admin extends CI_Controller
             $slug = $slug . '-' . substr(md5(uniqid()), 0, 5);
         }
 
+        // Format nomor WA: tambahkan 62 di depan
+        $no_wa_raw = preg_replace('/[^0-9]/', '', $this->input->post('no_wa'));
+        $no_wa = '62' . ltrim($no_wa_raw, '0');
+
         $data = [
             'nama_toko' => $nama_toko,
             'pemilik' => trim($this->input->post('pemilik')),
             'username' => $username,
             'password' => $this->input->post('password'),
             'slug' => $slug,
-            'no_wa' => preg_replace('/[^0-9]/', '', $this->input->post('no_wa')),
+            'no_wa' => $no_wa,
             'kategori' => $this->input->post('kategori') ?: 'Makanan',
             'alamat' => $this->input->post('alamat'),
             'nama_bank' => $this->input->post('nama_bank'),
             'no_rek' => $this->input->post('no_rek'),
             'atas_nama' => $this->input->post('atas_nama'),
-            'status' => 'pending',
+            'status' => 'aktif',
             'tema_warna' => '#ff6b35',
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
         $this->db->insert('toko', $data);
+        $toko_id = $this->db->insert_id();
 
-        $this->session->set_flashdata('sukses', 'Pendaftaran berhasil! Toko Anda sedang ditinjau oleh Owner. Kami akan menghubungi Anda via WhatsApp untuk konfirmasi aktivasi.');
-        redirect('admin/register');
+        // Auto login setelah register
+        $this->session->sess_regenerate(TRUE);
+        $this->session->set_userdata([
+            'toko_id' => $toko_id,
+            'toko_slug' => $slug,
+            'toko_nama' => $nama_toko,
+            'toko_tema' => '#ff6b35',
+            'is_admin' => true,
+        ]);
+
+        echo json_encode([
+            'status' => 'ok',
+            'message' => 'Pendaftaran berhasil! Selamat datang di toko Anda.',
+            'redirect' => base_url('admin/welcome'),
+            'csrf' => $this->security->get_csrf_hash(),
+            'csrf_name' => $this->security->get_csrf_token_name()
+        ]);
+    }
+
+    public function check_username_unique($username)
+    {
+        $username = trim(strtolower($username));
+        $existing = $this->db->get_where('toko', ['username' => $username])->row();
+        if ($existing) {
+            $this->form_validation->set_message('check_username_unique', 'Username "' . $username . '" sudah digunakan. Silakan pilih username lain.');
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    public function validate_wa_format($no_wa)
+    {
+        $no_wa = preg_replace('/[^0-9]/', '', $no_wa);
+        
+        // Harus dimulai dengan 8 (format 8xxx)
+        if (!preg_match('/^8[1-9][0-9]{7,11}$/', $no_wa)) {
+            $this->form_validation->set_message('validate_wa_format', 'Nomor WhatsApp harus dimulai dengan 8 (contoh: 8123456789). Jangan gunakan 0 atau 62 di depan.');
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    public function check_wa_unique($no_wa)
+    {
+        // Format ke 62xxx untuk cek duplikat
+        $no_wa_clean = preg_replace('/[^0-9]/', '', $no_wa);
+        $no_wa_formatted = '62' . ltrim($no_wa_clean, '0');
+        
+        $existing = $this->db->get_where('toko', ['no_wa' => $no_wa_formatted])->row();
+        if ($existing) {
+            $this->form_validation->set_message('check_wa_unique', 'Nomor WhatsApp sudah terdaftar di toko lain.');
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    public function check_username()
+    {
+        header('Content-Type: application/json');
+        $username = trim(strtolower($this->input->get('username')));
+        
+        if (strlen($username) < 3) {
+            echo json_encode(['available' => false, 'message' => 'Username terlalu pendek']);
+            return;
+        }
+        
+        $existing = $this->db->get_where('toko', ['username' => $username])->row();
+        echo json_encode(['available' => empty($existing)]);
+    }
+
+    public function check_wa()
+    {
+        header('Content-Type: application/json');
+        $no_wa = preg_replace('/[^0-9]/', '', $this->input->get('no_wa'));
+        $no_wa_formatted = '62' . ltrim($no_wa, '0');
+        
+        $existing = $this->db->get_where('toko', ['no_wa' => $no_wa_formatted])->row();
+        echo json_encode(['available' => empty($existing)]);
     }
 
     public function do_login()
@@ -401,7 +490,7 @@ class Admin extends CI_Controller
 
         $order_col_idx = $this->input->get('order')[0]['column'] ?? 0;
         $order_dir = $this->input->get('order')[0]['dir'] ?? 'desc';
-        $cols = ['id', 'foto', 'nama_produk', 'kategori', 'harga', 'stok', 'status', null];
+        $cols = [null, 'id', 'foto', 'nama_produk', 'kategori', 'harga', 'stok', 'status', null];
         $order_col = $cols[$order_col_idx] ?? 'id';
         if ($order_col)
             $this->db->order_by($order_col, $order_dir);
@@ -422,6 +511,7 @@ class Admin extends CI_Controller
                 <button class="btn btn-secondary btn-sm btn-icon" onclick="hapusProduk(' . $p->id . ')" title="Hapus">🗑️</button>
             </div>';
             $data[] = [
+                '<input type="checkbox" class="produk-check" value="' . $p->id . '">',
                 $p->id,
                 $fotoCell,
                 '<strong>' . htmlspecialchars($p->nama_produk) . '</strong>' . ($p->deskripsi ? '<br><small style="color:#9ca3af;">' . htmlspecialchars(substr($p->deskripsi, 0, 40)) . '</small>' : ''),
@@ -440,18 +530,101 @@ class Admin extends CI_Controller
         ]);
     }
 
+    public function produk_bulk_action()
+    {
+        header('Content-Type: application/json');
+        $toko = $this->_cek();
+        $action = $this->input->post('action');
+        $ids = $this->input->post('ids');
+
+        if (!is_array($ids) || empty($ids)) {
+            echo json_encode(['status' => 'error', 'message' => 'Pilih produk terlebih dahulu']);
+            return;
+        }
+
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            echo json_encode(['status' => 'error', 'message' => 'Produk tidak valid']);
+            return;
+        }
+
+        $produk = $this->db->where('toko_id', $toko->id)->where_in('id', $ids)->get('produk')->result();
+        if (empty($produk)) {
+            echo json_encode(['status' => 'error', 'message' => 'Produk tidak ditemukan']);
+            return;
+        }
+
+        $validIds = array_map(function ($p) {
+            return (int) $p->id;
+        }, $produk);
+
+        if ($action === 'delete') {
+            foreach ($produk as $p) {
+                if (!empty($p->foto)) {
+                    $path = FCPATH . 'assets/uploads/' . $p->foto;
+                    if (is_file($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+
+            $this->db->where('toko_id', $toko->id)->where_in('id', $validIds)->delete('produk');
+            echo json_encode(['status' => 'ok', 'message' => count($validIds) . ' produk dihapus']);
+            return;
+        }
+
+        if ($action === 'habis') {
+            $this->db->where('toko_id', $toko->id)->where_in('id', $validIds)->update('produk', ['status' => 'habis']);
+            echo json_encode(['status' => 'ok', 'message' => count($validIds) . ' produk dibuat tidak tersedia']);
+            return;
+        }
+
+        echo json_encode(['status' => 'error', 'message' => 'Aksi tidak valid']);
+    }
+
     public function produk_save()
     {
+        header('Content-Type: application/json');
         $toko = $this->_cek();
         $id = $this->input->post('id');
-        $config['upload_path'] = './assets/uploads/';
-        $config['allowed_types'] = 'gif|jpg|jpeg|png';
-        $config['max_size'] = 2048;
-        $this->load->library('upload', $config);
+
+        $old_produk = null;
+        if ($id) {
+            $old_produk = $this->Produk_model->get_by_id($id);
+            if (!$old_produk || $old_produk->toko_id != $toko->id) {
+                echo json_encode(['status' => 'error', 'message' => 'Produk tidak ditemukan']);
+                return;
+            }
+        }
+
+        $config['upload_path'] = FCPATH . 'assets/uploads/';
+        $config['allowed_types'] = 'gif|jpg|jpeg|png|avif|webp';
+        $config['max_size'] = 5120;
+        $config['encrypt_name'] = TRUE;
+        $this->load->library('upload');
+        $this->upload->initialize($config);
+        $this->load->library('image_lib');
 
         $foto = null;
-        if ($this->upload->do_upload('foto')) {
-            $foto = $this->upload->data('file_name');
+        if (!empty($_FILES['foto']['name'])) {
+            if (!$this->upload->do_upload('foto')) {
+                echo json_encode(['status' => 'error', 'message' => strip_tags($this->upload->display_errors())]);
+                return;
+            }
+
+            $gbr = $this->upload->data();
+            $config_img['image_library'] = 'gd2';
+            $config_img['source_image'] = $gbr['full_path'];
+            $config_img['maintain_ratio'] = TRUE;
+            $config_img['width'] = 700;
+            $config_img['height'] = 700;
+            $config_img['quality'] = '65%';
+
+            $this->image_lib->clear();
+            $this->image_lib->initialize($config_img);
+            $this->image_lib->resize();
+
+            $foto = $gbr['file_name'];
         }
 
         $data = [
@@ -467,8 +640,13 @@ class Admin extends CI_Controller
             $data['foto'] = $foto;
 
         if ($id) {
-            $old_produk = $this->Produk_model->get_by_id($id);
             $this->Produk_model->update($id, $data);
+            if ($foto && !empty($old_produk->foto)) {
+                $old_path = FCPATH . 'assets/uploads/' . $old_produk->foto;
+                if (is_file($old_path)) {
+                    @unlink($old_path);
+                }
+            }
             Log_Helper::log_produk_updated($toko->id, $toko->nama_toko, $toko->id, $toko->username, $old_produk->nama_produk, (array) $old_produk, $data);
             echo json_encode(['status' => 'ok', 'message' => 'Produk diupdate']);
         } else {
@@ -522,7 +700,7 @@ class Admin extends CI_Controller
             $row[] = '<span class="dt-badge" style="background:' . ($o->status_bayar == 'lunas' ? '#dcfce7' : '#fee2e2') . ';color:' . ($o->status_bayar == 'lunas' ? '#166534' : '#991b1b') . ';">' . $o->status_bayar . '</span>';
             $row[] = '<span class="dt-badge" style="background:' . ($o->status_order == 'selesai' ? '#dcfce7' : ($o->status_order == 'diproses' ? '#fef3c7' : ($o->status_order == 'batal' ? '#fee2e2' : '#dbeafe'))) . ';color:' . ($o->status_order == 'selesai' ? '#166534' : ($o->status_order == 'diproses' ? '#92400e' : ($o->status_order == 'batal' ? '#991b1b' : '#1e40af'))) . ';">' . $o->status_order . '</span>';
             $row[] = date('d/m/Y H:i', strtotime($o->created_at));
-            $row[] = '<button class="btn btn-secondary btn-sm btn-icon" onclick="viewOrder(' . $o->id . ')" title="Detail">👁️</button>';
+            $row[] = '<button class="btn btn-secondary btn-sm btn-icon" onclick="viewOrder(' . $o->id . ')" title="Detail">👁️</button> ' . $this->_quick_order_buttons($o);
             $data[] = $row;
         }
         echo json_encode([
@@ -562,6 +740,28 @@ class Admin extends CI_Controller
         $this->Order_model->update_status($id, $data);
         Log_Helper::log_order_updated($toko->id, $toko->nama_toko, $toko->id, $toko->username, $order->kode_order, $old_status_order . '/' . $old_status_bayar, $data['status_order'] . '/' . $data['status_bayar']);
         echo json_encode(['status' => 'ok', 'message' => 'Order diupdate']);
+    }
+
+    public function order_quick_update($id)
+    {
+        $toko = $this->_cek();
+        $order = $this->Order_model->get_by_id($id);
+        if (!$order || $order->toko_id != $toko->id) {
+            echo json_encode(['status' => 'error', 'message' => 'Order tidak ditemukan']);
+            return;
+        }
+
+        $valid_status = ['baru', 'diproses', 'selesai', 'batal'];
+        $status = $this->input->get('status');
+        if (!in_array($status, $valid_status)) {
+            echo json_encode(['status' => 'error', 'message' => 'Status tidak valid']);
+            return;
+        }
+
+        $old = $order->status_order . '/' . $order->status_bayar;
+        $this->Order_model->update_status($id, ['status_order' => $status]);
+        Log_Helper::log_order_updated($toko->id, $toko->nama_toko, $toko->id, $toko->username, $order->kode_order, $old, $status . '/' . $order->status_bayar);
+        echo json_encode(['status' => 'ok', 'message' => 'Status order diupdate ke "' . ucfirst($status) . '"']);
     }
 
     // ============= AJAX - KATEGORI =============
@@ -657,5 +857,20 @@ class Admin extends CI_Controller
         $this->db->update('produk', ['kategori' => 'Lainnya']);
         $this->Kategori_model->delete($id);
         echo json_encode(['status' => 'ok', 'message' => 'Kategori dihapus, produk dipindah ke "Lainnya"']);
+    }
+
+    private function _quick_order_buttons($o)
+    {
+        $btns = '';
+        if ($o->status_order == 'baru') {
+            $btns .= '<button class="btn btn-primary btn-sm btn-icon" onclick="quickUpdateOrder(' . $o->id . ', \'diproses\')" title="Proses">⏳</button> ';
+            $btns .= '<button class="btn btn-danger btn-sm btn-icon" onclick="quickUpdateOrder(' . $o->id . ', \'batal\')" title="Batalkan">✕</button>';
+        } elseif ($o->status_order == 'diproses') {
+            $btns .= '<button class="btn btn-success btn-sm btn-icon" onclick="quickUpdateOrder(' . $o->id . ', \'selesai\')" title="Selesaikan">✓</button>';
+            $btns .= '<button class="btn btn-danger btn-sm btn-icon" onclick="quickUpdateOrder(' . $o->id . ', \'batal\')" title="Batalkan">✕</button>';
+        } elseif ($o->status_order == 'selesai' || $o->status_order == 'batal') {
+            $btns .= '<button class="btn btn-secondary btn-sm btn-icon" onclick="quickUpdateOrder(' . $o->id . ', \'baru\')" title="Kembalikan ke Baru">↺</button>';
+        }
+        return $btns;
     }
 }

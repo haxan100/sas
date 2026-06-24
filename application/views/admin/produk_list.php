@@ -8,9 +8,64 @@
 <link rel="stylesheet" href="<?= base_url('assets/css/admin-toko.css') ?>">
 <link rel="stylesheet" href="<?= base_url('assets/css/admin-list.css') ?>">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <?php $this->load->view('toko/_tema', ['toko' => $toko]); ?>
+<style>
+/* Datatables style disamakan dengan kategori_list.php */
+.produk-page .dataTables_filter { display: none; }
+.produk-page table.dataTable { border-collapse: collapse !important; width: 100% !important; margin-top: 15px !important; }
+.produk-page table.dataTable thead th { background-color: #1e293b; color: white !important; padding: 12px 15px !important; font-weight: 600; border-bottom: none !important; }
+.produk-page table.dataTable thead th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.produk-page table.dataTable thead th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.produk-page table.dataTable tbody td { padding: 12px 15px !important; vertical-align: middle; border-bottom: 1px solid #e5e7eb; }
+.produk-page table.dataTable tbody tr:hover { background-color: #f8fafc; }
+.produk-page .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.produk-page .bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #f3f4f6; }
+.produk-page .dataTables_info { color: #6b7280; font-size: 14px; margin: 0; padding: 0 !important; }
+.produk-page .dataTables_paginate ul.pagination { display: flex; padding-left: 0; list-style: none !important; margin: 0; border-radius: 4px; }
+.produk-page .dataTables_paginate ul.pagination li { list-style: none !important; margin: 0; padding: 0; }
+.produk-page .dataTables_paginate ul.pagination li .page-link { position: relative; display: block; padding: 6px 14px; margin-left: -1px; font-size: 14px; color: #4f46e5; background-color: #fff; border: 1px solid #d1d5db; text-decoration: none; transition: background-color 0.2s; }
+.produk-page .dataTables_paginate ul.pagination li .page-link:hover { z-index: 2; background-color: #f3f4f6; color: #3730a3; }
+.produk-page .dataTables_paginate ul.pagination li.active .page-link { z-index: 3; color: #fff !important; background-color: #2563eb !important; border-color: #2563eb !important; }
+.produk-page .dataTables_paginate ul.pagination li.disabled .page-link { color: #9ca3af; pointer-events: none; background-color: #f9fafb; border-color: #d1d5db; }
+.produk-page .dataTables_paginate ul.pagination li:first-child .page-link { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.produk-page .dataTables_paginate ul.pagination li:last-child .page-link { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+.produk-page .bulk-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
+.produk-page .bulk-toolbar .bulk-info { color: #6b7280; font-size: 13px; margin-right: auto; }
+.produk-page .produk-check,
+.produk-page #checkAllProduk { width: 16px; height: 16px; cursor: pointer; }
+
+@media(max-width: 700px) {
+  .produk-page .toolbar { flex-direction: column; align-items: stretch; }
+  .produk-page .toolbar-left { width: 100%; flex-direction: column; align-items: stretch; }
+  .produk-page .toolbar input.search { max-width: 100%; }
+  .produk-page .filter-pills-wrap { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .produk-page .filter-pill { flex: 0 0 auto; }
+  .produk-page .bulk-toolbar { align-items: stretch; flex-direction: column; }
+  .produk-page .bulk-toolbar .bulk-info { margin-right: 0; }
+  .produk-page .bulk-toolbar .btn { width: 100%; justify-content: center; }
+  .produk-page .dataTables_wrapper { display: block !important; padding: 0 !important; }
+  .produk-page .produk-table-wrap { display: block !important; }
+  .produk-page #tableProduk { display: table !important; min-width: 820px; width: 820px !important; }
+  .produk-page #tableProduk thead,
+  .produk-page #tableProduk tbody,
+  .produk-page #tableProduk tr,
+  .produk-page #tableProduk th,
+  .produk-page #tableProduk td { display: revert !important; }
+  .produk-page #tableProduk th,
+  .produk-page #tableProduk td { white-space: nowrap; }
+  .produk-page .bottom { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .produk-page .dataTables_paginate ul.pagination { flex-wrap: wrap; }
+  .produk-page .modal-form-grid { grid-template-columns: 1fr; }
+  .produk-page .modal-form-grid .full { grid-column: span 1; }
+}
+
+@media(min-width: 701px) {
+  .produk-page .mobile-cards { display: none !important; }
+}
+</style>
 </head>
-<body class="admin-body">
+<body class="admin-body produk-page">
 <div class="admin-overlay" id="adminOverlay" onclick="toggleSidebar()"></div>
 <div class="admin-wrap">
 <?php $this->load->view('toko/_sidebar', ['toko' => $toko, 'current_page' => 'produk']); ?>
@@ -38,10 +93,19 @@
 <button class="btn btn-primary desktop-only" onclick="openProdukModal()">+ Tambah Produk</button>
 </div>
 
-<div class="table-wrap desktop-only">
+<div class="bulk-toolbar">
+<span class="bulk-info" id="bulkInfo">0 produk dipilih</span>
+<button type="button" class="btn btn-secondary btn-sm" onclick="checkAllProduk()">Ceklis All</button>
+<button type="button" class="btn btn-secondary btn-sm" onclick="uncheckAllProduk()">Uncek All</button>
+<button type="button" class="btn btn-warn btn-sm" onclick="bulkProdukAction('habis')">Tidak Tersedia</button>
+<button type="button" class="btn btn-danger btn-sm" onclick="bulkProdukAction('delete')">Hapus</button>
+</div>
+
+<div class="table-responsive produk-table-wrap">
 <table id="tableProduk" class="table" style="width:100%">
 <thead>
 <tr>
+<th width="40"><input type="checkbox" id="checkAllProduk" title="Pilih semua di halaman ini"></th>
 <th width="50">ID</th>
 <th width="70">Foto</th>
 <th>Nama Produk</th>
@@ -56,9 +120,6 @@
 </table>
 </div>
 
-<div class="mobile-cards" id="mobileProduk">
-<div class="mobile-cards-loading">⏳ Memuat produk...</div>
-</div>
 </div>
 </div>
 </main>
@@ -163,6 +224,7 @@
 <div class="toast" id="toast"><span id="toastMsg"></span></div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script src="<?= base_url('assets/js/admin.js') ?>"></script>
@@ -177,8 +239,12 @@ $(document).ready(function() {
     tableProduk = $('#tableProduk').DataTable({
         processing: true,
         serverSide: true,
+        scrollX: true,
         ajax: { url: baseUrl + 'admin/produk_ajax', type: 'GET' },
+        dom: '<"top"l>rt<"bottom"ip><"clear">',
+        autoWidth: false,
         columns: [
+            { orderable: false, searchable: false },
             { name: 'id' },
             { orderable: false, searchable: false },
             { name: 'nama_produk' },
@@ -188,7 +254,7 @@ $(document).ready(function() {
             { name: 'status' },
             { orderable: false, searchable: false }
         ],
-        order: [[0, 'desc']],
+        order: [[1, 'desc']],
         pageLength: 10,
         lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
         language: {
@@ -202,48 +268,87 @@ $(document).ready(function() {
             }).replaceWith('Tampilkan ');
         },
         drawCallback: function() {
-            renderMobileProdukCards();
+            document.getElementById('checkAllProduk').checked = false;
+            updateBulkInfo();
         }
     });
 
     $('#searchInput').on('keyup', function() {
         tableProduk.search(this.value).draw();
     });
+
+    $('#tableProduk').on('change', '.produk-check', updateBulkInfo);
+    $('#checkAllProduk').on('change', function() {
+        $('#tableProduk .produk-check').prop('checked', this.checked);
+        updateBulkInfo();
+    });
 });
 
-function renderMobileProdukCards() {
-    const container = document.getElementById('mobileProduk');
-    if (!container) return;
-    const data = tableProduk.rows({page: 'current'}).data();
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div class="mobile-cards-loading">Belum ada produk.<br><br>Tekan tombol + di bawah untuk tambah</div>';
+function getSelectedProdukIds() {
+    return $('#tableProduk .produk-check:checked').map(function() {
+        return this.value;
+    }).get();
+}
+
+function updateBulkInfo() {
+    const total = getSelectedProdukIds().length;
+    document.getElementById('bulkInfo').textContent = total + ' produk dipilih';
+    const visibleChecks = $('#tableProduk .produk-check');
+    const checkedVisible = $('#tableProduk .produk-check:checked');
+    const checkAll = document.getElementById('checkAllProduk');
+    checkAll.checked = visibleChecks.length > 0 && visibleChecks.length === checkedVisible.length;
+}
+
+function checkAllProduk() {
+    $('#tableProduk .produk-check').prop('checked', true);
+    updateBulkInfo();
+}
+
+function uncheckAllProduk() {
+    $('#tableProduk .produk-check, #checkAllProduk').prop('checked', false);
+    updateBulkInfo();
+}
+
+function bulkProdukAction(action) {
+    const ids = getSelectedProdukIds();
+    if (ids.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'Peringatan', text: 'Pilih produk terlebih dahulu', confirmButtonText: 'OK' });
         return;
     }
-    let html = '';
-    data.each(function(row) {
-        const [id, fotoHtml, nama, kategori, harga, stok, status, aksi] = row;
-        const imgMatch = fotoHtml.match(/src="([^"]+)"/);
-        const imgUrl = imgMatch ? imgMatch[1] : '';
-        const isEmpty = !imgUrl;
-        html += `<div class="card-list-item">
-            <div class="img">${isEmpty ? '🍽️' : '<img src="' + imgUrl + '">'}</div>
-            <div class="body">
-                <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
-                    <div style="min-width:0;flex:1;">
-                        <h4 style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nama.replace(/<br>.*$/, '').replace(/<[^>]+>/g, '')}</h4>
-                        <span class="dt-badge" style="background:#dbeafe;color:#1e40af;font-size:10px;">${kategori.replace(/<[^>]+>/g, '')}</span>
-                        <p style="margin-top:4px;">${harga}</p>
-                    </div>
-                </div>
-                <div class="meta" style="margin-top:8px;">
-                    <small style="color:#6cae0;">Stok: ${stok}</small>
-                    ${status}
-                </div>
-                <div style="margin-top:8px;display:flex;gap:6px;">${aksi}</div>
-            </div>
-        </div>`;
+
+    const message = action === 'delete'
+        ? 'Hapus ' + ids.length + ' produk terpilih? Foto produk juga akan dihapus.'
+        : 'Jadikan ' + ids.length + ' produk terpilih tidak tersedia?';
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Konfirmasi',
+        text: message,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Lanjutkan',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        const fd = new FormData();
+        fd.append('action', action);
+        ids.forEach(id => fd.append('ids[]', id));
+
+        fetch(baseUrl + 'admin/produk_bulk_action', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                        uncheckAllProduk();
+                        tableProduk.ajax.reload(null, false);
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
+                }
+            })
+            .catch(err => Swal.fire({ icon: 'error', title: 'Error', text: 'Error: ' + err, confirmButtonText: 'OK' }));
     });
-    container.innerHTML = html;
 }
 
 function openProdukModal() {
@@ -264,8 +369,6 @@ function openProdukModal() {
         document.getElementById('pNama').focus();
     }, 50);
 }
-    setTimeout(() => document.getElementById('pNama').focus(), 100);
-}
 
 function closeProdukModal() {
     document.getElementById('produkModal').classList.remove('show');
@@ -275,7 +378,7 @@ function editProduk(id) {
     fetch(baseUrl + 'admin/produk_get/' + id)
         .then(r => r.json())
         .then(p => {
-            if (p.error) { toast('Produk tidak ditemukan', 'error'); return; }
+            if (p.error) { Swal.fire({ icon: 'error', title: 'Error', text: 'Produk tidak ditemukan', confirmButtonText: 'OK' }); return; }
             document.getElementById('produkModalTitle').textContent = 'Edit Produk';
             document.getElementById('produkId').value = p.id;
             document.getElementById('pNama').value = p.nama_produk || '';
@@ -304,19 +407,34 @@ function editProduk(id) {
     }
 
 function hapusProduk(id) {
-    if (!confirm('Hapus produk ini?')) return;
-    fetch(baseUrl + 'admin/produk_hapus/' + id, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-            toast(data.message, data.status);
-            if (data.status === 'ok') tableProduk.ajax.reload();
-        });
+    Swal.fire({
+        icon: 'warning',
+        title: 'Hapus Produk?',
+        text: 'Produk ini akan dihapus beserta fotonya.',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+        fetch(baseUrl + 'admin/produk_hapus/' + id, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                        tableProduk.ajax.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
+                }
+            });
+    });
 }
 
 function filterCat(cat, el) {
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    tableProduk.column(3).search(cat ? '^' + cat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' : '', true, false).draw();
+    tableProduk.column(4).search(cat ? '^' + cat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$' : '', true, false).draw();
 }
 
 document.getElementById('produkForm').addEventListener('submit', function(e) {
@@ -329,16 +447,17 @@ document.getElementById('produkForm').addEventListener('submit', function(e) {
         .then(data => {
             btn.disabled = false; btn.textContent = 'Simpan';
             if (data.status === 'ok') {
-                toast(data.message, 'success');
-                closeProdukModal();
-                tableProduk.ajax.reload();
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                    closeProdukModal();
+                    tableProduk.ajax.reload();
+                });
             } else {
-                toast('Gagal: ' + (data.message || 'Unknown'), 'error');
+                Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
             }
         })
         .catch(err => {
             btn.disabled = false; btn.textContent = 'Simpan';
-            toast('Error: ' + err, 'error');
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error: ' + err, confirmButtonText: 'OK' });
         });
 });
 
@@ -360,19 +479,20 @@ document.getElementById('kategoriCepatForm').addEventListener('submit', function
         .then(r => r.json())
         .then(data => {
             if (data.status === 'ok') {
-                toast(data.message, 'success');
-                const katSelect = document.getElementById('pKategori');
-                const newName = document.getElementById('kCepatNama').value.trim();
-                const exists = Array.from(katSelect.options).find(o => o.value === newName);
-                if (!exists) {
-                    const opt = new Option(newName, newName, true, true);
-                    katSelect.add(opt);
-                }
-                katSelect.value = newName;
-                closeKategoriModal();
-                tableProduk.ajax.reload();
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                    const katSelect = document.getElementById('pKategori');
+                    const newName = document.getElementById('kCepatNama').value.trim();
+                    const exists = Array.from(katSelect.options).find(o => o.value === newName);
+                    if (!exists) {
+                        const opt = new Option(newName, newName, true, true);
+                        katSelect.add(opt);
+                    }
+                    katSelect.value = newName;
+                    closeKategoriModal();
+                    tableProduk.ajax.reload();
+                });
             } else {
-                toast(data.message, 'error');
+                Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
             }
         });
 });

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="<?= base_url('assets/css/admin-toko.css') ?>">
 <link rel="stylesheet" href="<?= base_url('assets/css/admin-list.css') ?>">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <?php $this->load->view('toko/_tema', ['toko' => $toko]); ?>
 <style>
 .detail-section { margin-bottom: 20px; }
@@ -83,6 +84,7 @@
 <div class="toast" id="toast"><span id="toastMsg"></span></div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 <script>
@@ -164,7 +166,9 @@ function renderMobileCards() {
                 <div class="meta">
                     ${bayar} ${statusBayar} ${statusOrder}
                 </div>
-                <div style="margin-top:8px;">${aksi}</div>
+                <div style="margin-top:8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="viewOrder(${id})">👁️ Detail</button>
+                </div>
             </div>
         </div>`;
     });
@@ -246,18 +250,51 @@ function renderOrder(data) {
     `;
 
     document.getElementById('updateOrderForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const fd = new FormData(this);
+    e.preventDefault();
+    const statusOrder = document.querySelector('[name="status_order"]').value;
+    const statusBayar = document.querySelector('[name="status_bayar"]').value;
+    const isComplete = statusOrder === 'selesai';
+    const isCancel = statusOrder === 'batal';
+    const isPaid = statusBayar === 'lunas';
+
+    let confirmMsg = '';
+    if (isComplete) confirmMsg = 'Tandai pesanan ini sebagai SELESAI?';
+    else if (isCancel) confirmMsg = 'Batalkan pesanan ini?';
+    else confirmMsg = 'Update status pesanan?';
+
+    const iconType = isComplete ? 'success' : (isCancel ? 'warning' : 'question');
+    const confirmBtn = isComplete ? 'Ya, Selesaikan' : (isCancel ? 'Ya, Batalkan' : 'Ya, Update');
+
+    Swal.fire({
+        icon: iconType,
+        title: 'Konfirmasi',
+        text: confirmMsg,
+        showCancelButton: true,
+        confirmButtonText: confirmBtn,
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        const fd = new FormData();
+        fd.append('status_order', statusOrder);
+        fd.append('status_bayar', statusBayar);
+
         fetch(baseUrl + '/admin/order_update/' + o.id, { method: 'POST', body: fd })
             .then(r => r.json())
             .then(data => {
-                toast(data.message, data.status);
                 if (data.status === 'ok') {
-                    tableOrders.ajax.reload();
-                    viewOrder(o.id);
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                        tableOrders.ajax.reload();
+                        viewOrder(o.id);
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
                 }
-            });
+            })
+            .catch(err => Swal.fire({ icon: 'error', title: 'Error', text: 'Error: ' + err, confirmButtonText: 'OK' }));
     });
+});
 }
 
 function closeOrderModal() {
@@ -268,11 +305,45 @@ function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g,
 function formatRupiah(n) { return parseInt(n).toLocaleString('id-ID'); }
 function formatDate(s) { return new Date(s).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 
-function toast(msg, type) {
-    const t = document.getElementById('toast');
-    t.className = 'toast ' + (type || 'info') + ' show';
-    document.getElementById('toastMsg').textContent = (type === 'success' ? '✓ ' : '⚠ ') + msg;
-    setTimeout(() => t.classList.remove('show'), 3000);
+function quickUpdateOrder(id, status) {
+    const statusLabels = { 'baru': 'Baru', 'diproses': 'Diproses', 'selesai': 'Selesai', 'batal': 'Batal' };
+    const messages = {
+        'diproses': 'Tandai pesanan ini sebagai DIPROSES?',
+        'selesai': 'Tandai pesanan ini sebagai SELESAI?',
+        'batal': 'Batalkan pesanan ini?',
+        'baru': 'Kembalikan pesanan ke status BARU?'
+    };
+    const icons = { 'selesai': 'success', 'diproses': 'info', 'batal': 'warning', 'baru': 'question' };
+    const confirmBtns = { 'selesai': 'Ya, Selesaikan', 'diproses': 'Ya, Proses', 'batal': 'Ya, Batalkan', 'baru': 'Ya, Kembalikan' };
+
+    Swal.fire({
+        icon: icons[status],
+        title: 'Konfirmasi',
+        text: messages[status],
+        showCancelButton: true,
+        confirmButtonText: confirmBtns[status],
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        const fd = new FormData();
+        fd.append('status_order', status);
+        fd.append('status_bayar', document.querySelector('#orderBody [name="status_bayar"]') ? document.querySelector('#orderBody [name="status_bayar"]').value : '');
+
+        fetch(baseUrl + '/admin/order_quick_update/' + id + '?status=' + status)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message, confirmButtonText: 'OK' }).then(() => {
+                        tableOrders.ajax.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Unknown error', confirmButtonText: 'OK' });
+                }
+            })
+            .catch(err => Swal.fire({ icon: 'error', title: 'Error', text: 'Error: ' + err, confirmButtonText: 'OK' }));
+    });
 }
 </script>
 <script src="<?= base_url('assets/js/admin.js') ?>"></script>

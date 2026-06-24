@@ -110,6 +110,7 @@ $route['admin/reset_tour'] = 'admin/reset_tour';
 $route['admin/update_pengaturan'] = 'admin/update_pengaturan';
 $route['admin/update_akun'] = 'admin/update_akun';
 $route['admin/produk_save'] = 'admin/produk_save';
+$route['admin/produk_bulk_action'] = 'admin/produk_bulk_action';
 $route['admin/produk_get/(:num)'] = 'admin/produk_get/$1';
 $route['admin/produk_hapus/(:num)'] = 'admin/produk_hapus/$1';
 $route['admin/order_get/(:num)'] = 'admin/order_get/$1';

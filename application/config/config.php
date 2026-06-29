@@ -489,7 +489,10 @@ $config['csrf_exclude_uris'] = array(
     'admin/skip_tour',
     'admin/reset_tour',
     'admin/check_username',
-    'admin/check_wa'
+    'admin/check_wa',
+    'admin/do_lupa_password',
+    'admin/do_verifikasi_otp',
+    'admin/do_reset_password'
 );
 
 /*
@@ -558,3 +561,12 @@ $config['rewrite_short_tags'] = FALSE;
 | Array:		array('10.0.1.200', '192.168.5.0/24')
 */
 $config['proxy_ips'] = '';
+
+/*
+|--------------------------------------------------------------------------
+| GoWA Configuration
+|--------------------------------------------------------------------------
+*/
+$config['go_wa_send_message_url'] = 'http://100.120.227.121:3030/send/message';
+$config['kirim_otp'] = TRUE;
+

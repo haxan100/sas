@@ -8,7 +8,7 @@ class Admin extends CI_Controller
     {
         parent::__construct();
         $this->load->model(['Toko_model', 'Produk_model', 'Order_model', 'Kategori_model']);
-        $this->load->library(['session', 'upload']);
+        $this->load->library(['session', 'upload', 'gowa']);
         $this->load->helper(['url', 'form']);
         $this->load->helper('Log_helper');
         // Prevent caching of auth-protected pages
@@ -174,20 +174,42 @@ class Admin extends CI_Controller
 
     public function do_login()
     {
+        // Set header ke JSON di awal
+        header('Content-Type: application/json');
+
         $u = $this->input->post('username');
         $p = $this->input->post('password');
+        
+        // Cek input kosong
+        if (empty($u) || empty($p)) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Username dan password tidak boleh kosong.',
+                'csrf_hash' => $this->security->get_csrf_hash()
+            ]);
+            return;
+        }
+
         $toko = $this->Toko_model->get_by_username($u);
+
         if ($toko && password_verify($p, $toko->password)) {
             if ($toko->status == 'pending') {
-                $this->session->set_flashdata('error', 'Akun Anda belum diverifikasi oleh Owner. Mohon tunggu konfirmasi aktivasi.');
-                redirect('admin');
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Akun Anda belum diverifikasi oleh Owner. Mohon tunggu konfirmasi aktivasi.',
+                    'csrf_hash' => $this->security->get_csrf_hash()
+                ]);
                 return;
             }
             if ($toko->status != 'aktif') {
-                $this->session->set_flashdata('error', 'Toko ini nonaktif. Hubungi owner.');
-                redirect('admin');
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Toko ini nonaktif. Hubungi owner.',
+                    'csrf_hash' => $this->security->get_csrf_hash()
+                ]);
                 return;
             }
+
             $this->session->sess_regenerate(TRUE);
             $this->session->set_userdata([
                 'toko_id' => $toko->id,
@@ -196,11 +218,23 @@ class Admin extends CI_Controller
                 'toko_tema' => $toko->tema_warna,
                 'is_admin' => true,
             ]);
+
             Log_Helper::log_login('admin', $toko->id, $toko->username, $toko->id, $toko->nama_toko);
-            redirect('admin/dashboard');
+            
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Login berhasil! Mengarahkan ke dashboard...',
+                'redirect_url' => base_url('admin/dashboard')
+            ]);
+            return;
         }
-        $this->session->set_flashdata('error', 'Username/password salah');
-        redirect('admin');
+
+        // Jika username/password salah
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Username atau password salah.',
+            'csrf_hash' => $this->security->get_csrf_hash()
+        ]);
     }
 
     public function logout()
@@ -211,6 +245,153 @@ class Admin extends CI_Controller
         $this->session->unset_userdata(['toko_id', 'toko_slug', 'toko_nama', 'toko_tema', 'is_admin']);
         redirect('admin');
     }
+
+    public function lupa_password()
+    {
+        if ($this->session->userdata('toko_id')) {
+            redirect('admin/dashboard');
+        }
+        $this->load->view('admin/lupa_password');
+    }
+
+    public function do_lupa_password()
+    {
+        header('Content-Type: application/json');
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('phone', 'Nomor Telepon', 'required|trim');
+
+        if ($this->form_validation->run() == FALSE) {
+            echo json_encode(['status' => 'error', 'message' => 'Nomor telepon wajib diisi.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+            return;
+        }
+
+        $phone = $this->input->post('phone');
+        if (!preg_match('/^8[1-9][0-9]{7,11}$/', $phone)) {
+            echo json_encode(['status' => 'error', 'message' => 'Format nomor telepon salah. Awali dengan 8.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+            return;
+        }
+
+        $toko = $this->Toko_model->get_by_phone('62' . $phone);
+        if (!$toko) {
+            echo json_encode(['status' => 'error', 'message' => 'Nomor telepon tidak terdaftar.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+            return;
+        }
+
+        // Rate Limiting: Cek permintaan terakhir
+        $two_minutes_ago = (new DateTime())->sub(new DateInterval('PT2M'))->format('Y-m-d H:i:s');
+        $recent_otp = $this->db->where('phone', $phone)->where('created_at >=', $two_minutes_ago)->count_all_results('otp_codes');
+        if ($recent_otp > 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Anda baru saja meminta OTP. Tunggu 2 menit lagi.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+            return;
+        }
+
+
+        $otp = (string) random_int(10000, 99999);
+        $now = new DateTime();
+        $expires = (new DateTime())->add(new DateInterval('PT5M'));
+
+        $this->db->insert('otp_codes', [
+            'phone' => $phone,
+            'code' => $otp,
+            'created_at' => $now->format('Y-m-d H:i:s'),
+            'expires_at' => $expires->format('Y-m-d H:i:s'),
+            'used' => 0,
+        ]);
+
+        if ($this->config->item('kirim_otp')) {
+            try {
+                $this->gowa->send_otp($phone, $otp);
+            } catch (Exception $e) {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal mengirim OTP. Coba lagi nanti.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+                return;
+            }
+        }
+        
+        $this->session->set_tempdata('reset_phone', $phone, 300);
+        echo json_encode(['status' => 'success', 'message' => 'OTP terkirim!', 'redirect_url' => base_url('admin/verifikasi_otp')]);
+    }
+
+    public function verifikasi_otp()
+    {
+        if (!$this->session->tempdata('reset_phone')) {
+            $this->session->set_flashdata('error', 'Sesi reset password habis. Silakan ulangi.');
+            redirect('admin/lupa_password');
+            return;
+        }
+        $data['phone'] = $this->session->tempdata('reset_phone');
+        $this->load->view('admin/verifikasi_otp', $data);
+    }
+
+    public function do_verifikasi_otp()
+    {
+        header('Content-Type: application/json');
+        $phone = $this->session->tempdata('reset_phone');
+        if (!$phone) {
+            echo json_encode(['status' => 'error', 'message' => 'Sesi habis, silakan ulangi dari awal.', 'csrf_hash' => $this->security->get_csrf_hash(), 'redirect_url' => base_url('admin/lupa_password')]);
+            return;
+        }
+
+        $otp = $this->input->post('otp');
+        if (empty($otp)) {
+            echo json_encode(['status' => 'error', 'message' => 'Kode OTP wajib diisi.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $otp_record = $this->db->get_where('otp_codes', [
+            'phone' => $phone,
+            'code' => $otp,
+            'used' => 0,
+            'expires_at >' => $now
+        ])->row();
+
+        if ($otp_record) {
+            $this->db->where('id', $otp_record->id)->update('otp_codes', ['used' => 1]);
+            $this->session->set_tempdata('reset_verified_phone', $phone, 300);
+            echo json_encode(['status' => 'success', 'message' => 'Verifikasi berhasil!', 'redirect_url' => base_url('admin/reset_password')]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Kode OTP salah atau sudah kedaluwarsa.', 'csrf_hash' => $this->security->get_csrf_hash()]);
+        }
+    }
+
+    public function reset_password()
+    {
+        if (!$this->session->tempdata('reset_verified_phone')) {
+            $this->session->set_flashdata('error', 'Sesi reset password habis. Silakan ulangi.');
+            redirect('admin/lupa_password');
+            return;
+        }
+        $this->load->view('admin/reset_password');
+    }
+
+    public function do_reset_password()
+    {
+        header('Content-Type: application/json');
+        $phone = $this->session->tempdata('reset_verified_phone');
+        if (!$phone) {
+            echo json_encode(['status' => 'error', 'message' => 'Sesi habis, silakan ulangi dari awal.', 'redirect_url' => base_url('admin/lupa_password')]);
+            return;
+        }
+
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('password', 'Password Baru', 'required|min_length[4]');
+        $this->form_validation->set_rules('passconf', 'Konfirmasi Password', 'required|matches[password]');
+
+        if ($this->form_validation->run() == FALSE) {
+            echo json_encode(['status' => 'error', 'message' => strip_tags(validation_errors()), 'csrf_hash' => $this->security->get_csrf_hash()]);
+        } else {
+            $new_password = $this->input->post('password');
+            $this->Toko_model->update_password_by_phone('62' . $phone, $new_password);
+            
+            $this->session->unset_tempdata('reset_phone');
+            $this->session->unset_tempdata('reset_verified_phone');
+
+            $this->session->set_flashdata('success', 'Password Anda berhasil diubah. Silakan login dengan password baru.');
+            echo json_encode(['status' => 'success', 'message' => 'Password berhasil diubah!', 'redirect_url' => base_url('admin')]);
+        }
+    }
+
+
 
     // ============= GUARD =============
     private function _cek()

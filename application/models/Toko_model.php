@@ -19,6 +19,11 @@ class Toko_model extends CI_Model {
         return $this->db->get_where('toko', ['username' => $username])->row();
     }
 
+    public function get_by_phone($phone) {
+        return $this->db->get_where('toko', ['no_wa' => $phone])->row();
+    }
+
+
     public function get_by_id_toko($id) {
         return $this->db->get_where('toko', ['id' => $id])->row();
     }
@@ -61,6 +66,12 @@ class Toko_model extends CI_Model {
 
     public function reset_onboarding($id) {
         return $this->db->where('id', $id)->update('toko', ['onboarding_done' => 0]);
+    }
+
+    public function update_password_by_phone($phone, $new_password) {
+        $data = ['password' => password_hash($new_password, PASSWORD_DEFAULT)];
+        $this->db->where('no_wa', $phone);
+        return $this->db->update('toko', $data);
     }
 }
 
